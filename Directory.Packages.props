@@ -35,6 +35,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- JobBoard.Shared: EF Core spine (base context + repository) and edge validation -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tests: xUnit + a real relational provider (SQLite) for transaction/rollback coverage -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <!-- Override the vulnerable native lib (2.1.11) pulled transitively by the SQLite provider -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- ServiceDefaults: resilience, service discovery, OpenTelemetry -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />

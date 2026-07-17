@@ -6,4 +6,7 @@
     <Project Path="src/JobBoard.ServiceDefaults/JobBoard.ServiceDefaults.csproj" />
     <Project Path="src/JobBoard.Shared/JobBoard.Shared.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JobBoard.Shared.Tests/JobBoard.Shared.Tests.csproj" />
+  </Folder>
 </Solution>

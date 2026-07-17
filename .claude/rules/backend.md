@@ -44,6 +44,10 @@ consumer is the `add-endpoint` skill; these are the standing rules.
   `dotnet ef migrations add <Name> --project ../JobBoard.<Service>.Core --startup-project . --context <Service>DbContext`,
   review, then `database update`. Commit the migration.
 - **Naming.** PascalCase types/methods, `_camelCase` private fields, camelCase locals.
+- **One type per file.** Each public type lives in its own file, named for the type — records, enums,
+  and interfaces included (an interface and its implementation are two files, e.g. `IOutbox.cs` +
+  `Outbox.cs`). The only companions allowed to share a file are ones that have no meaning apart from
+  their parent (a private nested type).
 
 Domain lives in each service's `.Core` (starting shapes): **Jobs** — `Job`, `Category`, `Tag`;
 **Applications** — `Application` (status lifecycle); **Profiles** — `CandidateProfile`,
