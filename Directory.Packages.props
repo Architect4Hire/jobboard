@@ -4,15 +4,13 @@
     Central Package Management. Every <PackageReference> across the solution omits its Version and
     resolves it from a <PackageVersion> here, so a package is pinned in exactly one place.
 
-    Versions are intentionally NOT pre-filled: Aspire 13 / .NET 10 and the Azure Service Bus
-    integration ship fast, and a stale pin is worse than none. The scaffolding prompts
-    (docs/scrub-prompts.md) add each package here as they introduce it — pin the version you install,
-    verified against https://aspire.dev and nuget.org.
+    Versions are pinned to what was installed and verified against https://aspire.dev / nuget.org.
+    The scaffolding prompts (docs/scrub-prompts.md) add each package here as they introduce it.
 
     The families you'll add, by area (names may shift between versions — verify):
-      Aspire:        Aspire.Hosting.AppHost, Aspire.Hosting.PostgreSQL,
-                     Aspire.Hosting.Azure.ServiceBus, Aspire.Hosting.Redis,
-                     Aspire.Hosting.NodeJs (JavaScript app), plus the client integrations
+      Aspire:        Aspire.Hosting.AppHost (via the AppHost SDK), Aspire.Hosting.PostgreSQL,
+                     Aspire.Hosting.JavaScript (JS/Angular app — NOT Aspire.Hosting.NodeJs),
+                     Aspire.Hosting.Azure.ServiceBus, Aspire.Hosting.Redis, plus client integrations
                      (Aspire.Npgsql.EntityFrameworkCore.PostgreSQL, Aspire.Azure.Messaging.ServiceBus,
                      Aspire.StackExchange.Redis)
       EF Core:       Microsoft.EntityFrameworkCore.Design, Npgsql.EntityFrameworkCore.PostgreSQL
@@ -26,10 +24,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Example (uncomment + set the version you install):
-    <PackageVersion Include="FluentValidation" Version="x.y.z" />
-    <PackageVersion Include="Yarp.ReverseProxy" Version="x.y.z" />
-    -->
+    <!-- Aspire hosting integrations (AppHost) -->
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Gateway (YARP reverse-proxy library) -->
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ServiceDefaults: resilience, service discovery, OpenTelemetry -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
   </ItemGroup>
 
 </Project>

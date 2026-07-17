@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JobBoard.AppHost/JobBoard.AppHost.csproj" />
+    <Project Path="src/JobBoard.Contracts/JobBoard.Contracts.csproj" />
+    <Project Path="src/JobBoard.Gateway/JobBoard.Gateway.csproj" />
+    <Project Path="src/JobBoard.ServiceDefaults/JobBoard.ServiceDefaults.csproj" />
+    <Project Path="src/JobBoard.Shared/JobBoard.Shared.csproj" />
+  </Folder>
+</Solution>

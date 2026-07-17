@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobBoard.Contracts\JobBoard.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
