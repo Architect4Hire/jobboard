@@ -1,9 +1,19 @@
+using System.Security.Cryptography;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Local PostgreSQL server (a container). One database per service is added off this server.
 var postgres = builder.AddPostgres("postgres");
 var jobsDb = postgres.AddDatabase("jobsdb");
 var applicationsDb = postgres.AddDatabase("applicationsdb");
+var identityDb = postgres.AddDatabase("identitydb");
+
+// Shared HMAC signing key for the JWTs Identity issues and the gateway validates. Kept out of source:
+// supplied via AppHost config/user-secrets (Jwt:SigningKey) when present, otherwise a per-run generated
+// dev key so `aspire run` stays a single command. Injected identically to both services via env — never
+// a hardcoded literal. (Aspire exposes no auto-generated-secret parameter helper, so this is the wiring.)
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
+    ?? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
 // Azure Service Bus, run locally as the emulator container (plus its mssql companion) — no cloud
 // resource. Topics/subscriptions are declared per event as services are introduced.
@@ -42,16 +52,28 @@ var applications = builder.AddProject<Projects.JobBoard_Applications>("applicati
     .WaitFor(applicationsDb)
     .WaitFor(serviceBus);   // runs the outbox dispatcher + processor host, so it uses the bus
 
-// The gateway is the only public entry point. It references jobs so YARP can resolve the "http://jobs"
-// destination through service discovery, and the bus (a placeholder until services consume it). The
+// Identity: owns identitydb, issues JWTs. Synchronous request/response service — it publishes and
+// consumes no integration events, so it takes no Service Bus reference. The signing key is injected via
+// env (Jwt__SigningKey) so it stays out of source.
+var identity = builder.AddProject<Projects.JobBoard_Identity>("identity")
+    .WithReference(identityDb)
+    .WaitFor(identityDb)
+    .WithEnvironment("Jwt__SigningKey", jwtSigningKey);
+
+// The gateway is the only public entry point. It references each proxied service so YARP can resolve the
+// "http://<service>" destinations through service discovery, and the bus (a placeholder until services
+// consume it). It validates the JWTs Identity signs, so it gets the same signing key via env. The
 // connection/discovery config is injected, never hardcoded.
 var gateway = builder.AddProject<Projects.JobBoard_Gateway>("gateway")
     .WithExternalHttpEndpoints()
     .WithReference(jobs)
     .WithReference(applications)
+    .WithReference(identity)
     .WithReference(serviceBus)
+    .WithEnvironment("Jwt__SigningKey", jwtSigningKey)
     .WaitFor(jobs)
-    .WaitFor(applications);
+    .WaitFor(applications)
+    .WaitFor(identity);
 
 // The Angular app talks only to the gateway; Aspire injects the gateway base URL and the
 // port to serve on — nothing is hardcoded.

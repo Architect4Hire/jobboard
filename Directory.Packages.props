@@ -41,6 +41,13 @@
          names ("http://jobs") through service discovery instead of a literal DNS host. -->
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.7.0" />
+    <!-- Gateway edge auth: validates JWTs issued by JobBoard.Identity before proxying protected routes. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JobBoard.Identity.Core: JWT issuance (password hashing comes from the shared framework). -->
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
   </ItemGroup>
 
   <ItemGroup>
