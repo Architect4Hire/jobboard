@@ -1,6 +1,8 @@
+using JobBoard.Contracts;
 using JobBoard.Shared.Errors;
 using JobBoard.Shared.Messaging;
 using JobBoard.Shared.Persistence;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -18,8 +20,9 @@ public static class SharedServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddSharedPersistence(this IServiceCollection services)
     {
-        services.AddScoped<IOutbox, Outbox>();
-        services.AddScoped<IInbox, Inbox>();
+        // TryAdd so this composes with AddSharedMessaging in either order without double-registering.
+        services.TryAddScoped<IOutbox, Outbox>();
+        services.TryAddScoped<IInbox, Inbox>();
         return services;
     }
 
@@ -31,8 +34,82 @@ public static class SharedServiceCollectionExtensions
     public static IServiceCollection AddSharedPersistence<TContext>(this IServiceCollection services)
         where TContext : BaseDbContext
     {
-        services.AddScoped<BaseDbContext>(sp => sp.GetRequiredService<TContext>());
+        services.TryAddScoped<BaseDbContext>(sp => sp.GetRequiredService<TContext>());
         return services.AddSharedPersistence();
+    }
+
+    /// <summary>
+    /// Registers the transactional-outbox relay: the outbox/inbox on the request scope (bridging
+    /// <typeparamref name="TDbContext"/> to <see cref="BaseDbContext"/> so their rows enlist in the domain
+    /// transaction), plus the <see cref="OutboxDispatcher"/> and <see cref="ServiceBusProcessorHost"/> background
+    /// services. A superset of <see cref="AddSharedPersistence{TContext}"/> (uses <c>TryAdd</c>, so calling both
+    /// stays safe). Assumes the host has registered a <c>ServiceBusClient</c> via <c>AddAzureServiceBusClient</c>.
+    /// </summary>
+    public static IServiceCollection AddSharedMessaging<TContext>(
+        this IServiceCollection services,
+        Action<OutboxRelayOptions>? configure = null)
+        where TContext : BaseDbContext
+    {
+        // Bridge + outbox/inbox — same wiring as AddSharedPersistence, but idempotent so both can be called.
+        services.TryAddScoped<BaseDbContext>(sp => sp.GetRequiredService<TContext>());
+        services.TryAddScoped<IOutbox, Outbox>();
+        services.TryAddScoped<IInbox, Inbox>();
+
+        services.Configure(configure ?? (_ => { }));
+
+        // The relay workers are shared, thread-safe singletons; the two hosts drive them. The registry is a
+        // single instance populated at registration time (see AddIntegrationEventConsumer), so seed it here.
+        GetOrCreateConsumerRegistry(services);
+        services.TryAddSingleton<OutboxRelay>();
+        services.TryAddSingleton<IntegrationEventProcessor>();
+
+        services.AddHostedService<OutboxDispatcher>();
+        services.AddHostedService<ServiceBusProcessorHost>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a consumer for <typeparamref name="TEvent"/> under this service's <paramref name="subscription"/>.
+    /// The topic is the event type's name — the same value <see cref="Outbox"/> stamps as the row's
+    /// <c>Destination</c> — so a consumer can never subscribe to a topic the dispatcher doesn't publish to. The
+    /// <see cref="ServiceBusProcessorHost"/> opens a processor per registered subscription and dispatches to the
+    /// consumer. Call after <see cref="AddSharedMessaging{TContext}"/>.
+    /// </summary>
+    public static IServiceCollection AddIntegrationEventConsumer<TEvent, TConsumer>(
+        this IServiceCollection services,
+        string subscription)
+        where TEvent : IIntegrationEvent
+        where TConsumer : class, IIntegrationEventConsumer<TEvent>
+    {
+        services.AddScoped<IIntegrationEventConsumer<TEvent>, TConsumer>();
+
+        // Topic == event type name, matching the dispatcher's per-event-type destination convention.
+        var eventName = typeof(TEvent).Name;
+        GetOrCreateConsumerRegistry(services)
+            .Add(new ConsumerRegistration(eventName, typeof(TEvent), eventName, subscription));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Returns the one <see cref="ConsumerRegistry"/> instance registered on <paramref name="services"/>,
+    /// creating and registering it on first use. Populated during registration and resolved by the hosts, so it
+    /// must be a shared instance regardless of whether <see cref="AddSharedMessaging{TContext}"/> or
+    /// <see cref="AddIntegrationEventConsumer{TEvent, TConsumer}"/> runs first.
+    /// </summary>
+    private static ConsumerRegistry GetOrCreateConsumerRegistry(IServiceCollection services)
+    {
+        var registry = (ConsumerRegistry?)services
+            .FirstOrDefault(d => d.ServiceType == typeof(ConsumerRegistry))?.ImplementationInstance;
+
+        if (registry is null)
+        {
+            registry = new ConsumerRegistry();
+            services.AddSingleton(registry);
+        }
+
+        return registry;
     }
 
     /// <summary>
