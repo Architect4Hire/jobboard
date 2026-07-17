@@ -1,3 +1,4 @@
+using JobBoard.Jobs.Core.Managers.Models.Domain;
 using JobBoard.Shared.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -5,7 +6,7 @@ namespace JobBoard.Jobs.Core.Data;
 
 /// <summary>
 /// EF Core context for jobsdb. Derives from <see cref="BaseDbContext"/> to inherit the
-/// cross-cutting Outbox/Inbox sets; domain sets (Job, Category, Tag) arrive in later steps.
+/// cross-cutting Outbox/Inbox sets, and adds the Jobs domain (Job, Category, Tag).
 /// </summary>
 public class JobsDbContext : BaseDbContext
 {
@@ -13,9 +14,15 @@ public class JobsDbContext : BaseDbContext
     {
     }
 
+    public DbSet<Job> Jobs => Set<Job>();
+
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Tag> Tags => Set<Tag>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // Domain configuration added with the Job model in a later step.
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(JobsDbContext).Assembly);
     }
 }

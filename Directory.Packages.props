@@ -44,6 +44,8 @@
   <ItemGroup>
     <!-- JobBoard.Shared: EF Core spine (base context + repository) and edge validation -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <!-- JobBoard.Shared: Service Bus SDK types for the outbox dispatcher + processor host (the
          AddAzureServiceBusClient integration is added per-host, not here) -->

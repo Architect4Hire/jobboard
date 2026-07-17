@@ -5,4 +5,9 @@
     <ProjectReference Include="..\JobBoard.Contracts\JobBoard.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- EF Core Npgsql provider: the DbContext + its migrations live here, so the provider does too. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
 </Project>
