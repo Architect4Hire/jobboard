@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JobBoard.Gateway\JobBoard.Gateway.csproj" />
+    <ProjectReference Include="..\JobBoard.Jobs\JobBoard.Jobs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
