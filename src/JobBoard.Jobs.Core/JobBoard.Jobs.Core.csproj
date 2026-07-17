@@ -6,8 +6,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- StatusCodes for the HTTP status carried on DomainException (same reason Shared takes it). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- EF Core Npgsql provider: the DbContext + its migrations live here, so the provider does too. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Edge validation of view models (the facade validates; validators live in Managers/Validators). -->
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
   </ItemGroup>
 
 </Project>

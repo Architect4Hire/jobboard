@@ -4,7 +4,7 @@ namespace JobBoard.Jobs.Core.Managers.Models.Domain;
 /// A fine-grained label a <see cref="Job"/> can carry (e.g. "remote", "dotnet"). Many jobs to many
 /// tags; <see cref="Slug"/> is the URL-safe unique key used for filtering.
 /// </summary>
-public class Tag
+public class Tag : IClassification
 {
     public Guid Id { get; set; }
 

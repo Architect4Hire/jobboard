@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" />
   </ItemGroup>
 
 </Project>

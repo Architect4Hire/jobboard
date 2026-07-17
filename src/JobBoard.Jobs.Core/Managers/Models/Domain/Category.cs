@@ -4,7 +4,7 @@ namespace JobBoard.Jobs.Core.Managers.Models.Domain;
 /// A broad classification a <see cref="Job"/> can belong to (e.g. "Engineering"). Many jobs to many
 /// categories; <see cref="Slug"/> is the URL-safe unique key used for filtering.
 /// </summary>
-public class Category
+public class Category : IClassification
 {
     public Guid Id { get; set; }
 
