@@ -1,0 +1,49 @@
+@if (job(); as job) {
+  <article class="detail">
+    <a class="detail__back" routerLink="/jobs">← All positions</a>
+
+    <header class="detail__head">
+      <h1>{{ job.title }}</h1>
+      <p class="detail__meta">
+        {{ job.location }} · {{ job.salary.min | number }}–{{ job.salary.max | number }}
+        {{ job.salary.currency }}
+      </p>
+    </header>
+
+    @if (job.categories.length || job.tags.length) {
+      <ul class="detail__tags">
+        @for (category of job.categories; track category.slug) {
+          <li class="detail__tag detail__tag--category">{{ category.name }}</li>
+        }
+        @for (tag of job.tags; track tag.slug) {
+          <li class="detail__tag">{{ tag.name }}</li>
+        }
+      </ul>
+    }
+
+    <p class="detail__description">{{ job.description }}</p>
+
+    <section class="apply">
+      @if (submitted(); as application) {
+        <p class="apply__done">
+          Application submitted — <app-application-status [status]="application.status" />
+        </p>
+      } @else if (job.status !== JobStatus.Open) {
+        <p class="apply__closed">This position is no longer accepting applications.</p>
+      } @else if (isCandidate()) {
+        <button type="button" class="apply__btn" [disabled]="applying()" (click)="apply()">
+          {{ applying() ? 'Submitting…' : 'Apply now' }}
+        </button>
+        @if (applyError(); as error) {
+          <p class="apply__error" role="alert">{{ error }}</p>
+        }
+      } @else if (!isAuthenticated()) {
+        <p class="apply__hint"><a routerLink="/login">Log in</a> as a candidate to apply.</p>
+      }
+    </section>
+  </article>
+} @else if (loadError()) {
+  <p class="load-error" role="alert">Couldn't load this position. Please try again.</p>
+} @else {
+  <p class="loading">Loading position…</p>
+}

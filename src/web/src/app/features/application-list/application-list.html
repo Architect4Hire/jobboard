@@ -1,0 +1,39 @@
+@if (applications(); as applications) {
+  <section class="applications">
+    <h1>My applications</h1>
+
+    @if (applications.length) {
+      <ul class="rows">
+        @for (application of applications; track application.id) {
+          <li class="row">
+            <div class="row__main">
+              <a class="row__job" [routerLink]="['/jobs', application.jobId]">View posting</a>
+              <span class="row__date">
+                Applied {{ application.submittedOnUtc | date: 'mediumDate' }}
+              </span>
+            </div>
+            <div class="row__side">
+              <app-application-status [status]="application.status" />
+              @if (canWithdraw(application.status)) {
+                <button
+                  type="button"
+                  class="row__withdraw"
+                  [disabled]="withdrawing() === application.id"
+                  (click)="withdraw(application.id)"
+                >
+                  {{ withdrawing() === application.id ? 'Withdrawing…' : 'Withdraw' }}
+                </button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    } @else if (loadError()) {
+      <p class="load-error" role="alert">Couldn't load your applications. Please try again.</p>
+    } @else {
+      <p class="empty">You haven't applied to any positions yet.</p>
+    }
+  </section>
+} @else {
+  <p class="loading">Loading your applications…</p>
+}

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 import { AuthToken } from '../models/identity.model';
 
@@ -6,30 +6,30 @@ const STORAGE_KEY = 'jobboard.auth';
 
 /**
  * Single source of the Identity JWT. Persists the token in localStorage so a reload stays signed in, and
- * is the only place the token lives — the auth interceptor reads it, AuthService sets/clears it. Guards
- * every localStorage touch so the app doesn't throw where storage is unavailable (SSR, private modes).
+ * is the only place the token lives — the auth interceptor reads it, AuthService sets/clears it, Session
+ * derives the current principal from it. Held in a signal so nav/guards react to sign in/out without
+ * subscriptions. Guards every localStorage touch so the app doesn't throw where storage is unavailable
+ * (SSR, private modes).
  */
 @Injectable({ providedIn: 'root' })
 export class TokenStore {
-  private _token: AuthToken | null = this.read();
+  private readonly _token = signal<AuthToken | null>(this.read());
 
-  /** The current bearer token, or null when signed out. */
-  get token(): AuthToken | null {
-    return this._token;
-  }
+  /** The current bearer token as a signal, or null when signed out. */
+  readonly token = this._token.asReadonly();
 
   /** The raw JWT string to attach as `Authorization: Bearer …`, or null when signed out. */
   get accessToken(): string | null {
-    return this._token?.accessToken ?? null;
+    return this._token()?.accessToken ?? null;
   }
 
   set(token: AuthToken): void {
-    this._token = token;
+    this._token.set(token);
     this.write(token);
   }
 
   clear(): void {
-    this._token = null;
+    this._token.set(null);
     this.write(null);
   }
 

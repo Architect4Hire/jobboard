@@ -1,0 +1,71 @@
+.auth {
+  max-width: 380px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+.field input,
+.field select {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.field__error {
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+.auth__error {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.auth__submit {
+  padding: 0.65rem 1.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth__submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth__alt {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #667085;
+}
+
+.auth__alt a {
+  color: #1d4ed8;
+}

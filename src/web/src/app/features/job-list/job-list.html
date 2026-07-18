@@ -1,0 +1,62 @@
+@if (loadError()) {
+  <p class="load-error" role="alert">Couldn't load positions. Please refresh to try again.</p>
+} @else if (visibleJobs(); as jobs) {
+  <section class="board">
+    <header class="board__head">
+      <h1>Open positions</h1>
+      @if (categories().length) {
+        <div class="filters" role="group" aria-label="Filter by category">
+          <button
+            type="button"
+            class="filters__chip"
+            [class.filters__chip--active]="selectedCategory() === null"
+            (click)="select(null)"
+          >
+            All
+          </button>
+          @for (category of categories(); track category) {
+            <button
+              type="button"
+              class="filters__chip"
+              [class.filters__chip--active]="selectedCategory() === category"
+              (click)="select(category)"
+            >
+              {{ category }}
+            </button>
+          }
+        </div>
+      }
+    </header>
+
+    @if (jobs.length) {
+      <ul class="cards">
+        @for (job of jobs; track job.id) {
+          <li class="card">
+            <a class="card__link" [routerLink]="['/jobs', job.id]">
+              <h2 class="card__title">{{ job.title }}</h2>
+              <p class="card__location">{{ job.location }}</p>
+              <p class="card__salary">
+                {{ job.salary.min | number }}–{{ job.salary.max | number }}
+                {{ job.salary.currency }}
+              </p>
+              @if (job.categorySlugs.length) {
+                <ul class="card__tags">
+                  @for (slug of job.categorySlugs; track slug) {
+                    <li class="card__tag">{{ slug }}</li>
+                  }
+                </ul>
+              }
+              @if (job.status === JobStatus.Closed) {
+                <span class="card__closed">Closed</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">No positions match this filter.</p>
+    }
+  </section>
+} @else {
+  <p class="loading">Loading positions…</p>
+}
