@@ -4,8 +4,9 @@ using JobBoard.Jobs.Core.Managers.Models.ViewModels;
 namespace JobBoard.Jobs.Core.Facade;
 
 /// <summary>
-/// The boundary the controller calls: validates inbound view models and (when a cache is wired) caches
-/// service models, then delegates to <see cref="Business.IJobBusiness"/>. No mapping, EF, or bus here.
+/// The boundary the controller calls: validates inbound view models and read-through/invalidates the
+/// cached job-list service models, then delegates to <see cref="Business.IJobBusiness"/>. No mapping, EF,
+/// or bus here.
 /// </summary>
 public interface IJobFacade
 {

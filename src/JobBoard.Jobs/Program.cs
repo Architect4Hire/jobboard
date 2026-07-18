@@ -14,11 +14,16 @@ builder.AddNpgsqlDbContext<JobsDbContext>("jobsdb");
 // so AddSharedMessaging's dispatcher/processor host have a client to resolve.
 builder.AddAzureServiceBusClient("servicebus");
 
+// Redis-backed IDistributedCache via the Aspire integration, keyed to the "cache" resource — the store
+// behind the facade's ICache (connection injected by the AppHost, never a raw connection string).
+builder.AddRedisDistributedCache("cache");
+
 // Composition: the .Core stack (facade → business → data → repository + validators) + the shared
-// persistence/messaging spine.
+// persistence/messaging spine + the shared facade cache (ICache → RedisCache).
 builder.Services.AddJobsCore();
 builder.Services.AddSharedPersistence<JobsDbContext>();
 builder.Services.AddSharedMessaging<JobsDbContext>();
+builder.Services.AddSharedCaching();
 builder.Services.AddSharedExceptionHandler();
 
 builder.Services.AddControllers();
@@ -33,6 +38,9 @@ if (app.Environment.IsDevelopment())
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed prototypical .NET / Angular / Azure postings (idempotent) so the board has content to review.
+    await JobBoard.Jobs.Core.Seeding.JobsSeedData.SeedAsync(db);
 }
 
 app.UseExceptionHandler();

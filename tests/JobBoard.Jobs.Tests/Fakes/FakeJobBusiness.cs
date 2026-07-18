@@ -12,12 +12,21 @@ public sealed class FakeJobBusiness : IJobBusiness
 {
     public JobDetailServiceModel Result { get; init; } = default!;
 
+    public IReadOnlyList<JobSummaryServiceModel> ListResult { get; init; } = [];
+
     public int PostCallCount { get; private set; }
+
+    public int CloseCallCount { get; private set; }
+
+    public int ListCallCount { get; private set; }
 
     public PostJobViewModel? PostedViewModel { get; private set; }
 
-    public Task<IReadOnlyList<JobSummaryServiceModel>> ListAsync(string? categorySlug, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<JobSummaryServiceModel>>([]);
+    public Task<IReadOnlyList<JobSummaryServiceModel>> ListAsync(string? categorySlug, CancellationToken cancellationToken = default)
+    {
+        ListCallCount++;
+        return Task.FromResult(ListResult);
+    }
 
     public Task<JobDetailServiceModel?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult<JobDetailServiceModel?>(Result);
@@ -29,6 +38,9 @@ public sealed class FakeJobBusiness : IJobBusiness
         return Task.FromResult(Result);
     }
 
-    public Task<JobDetailServiceModel> CloseAsync(Guid id, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result);
+    public Task<JobDetailServiceModel> CloseAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        CloseCallCount++;
+        return Task.FromResult(Result);
+    }
 }

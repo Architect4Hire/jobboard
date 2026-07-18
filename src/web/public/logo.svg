@@ -1,0 +1,35 @@
+<svg width="132" height="40" viewBox="0 0 132 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JobBoard">
+  <defs>
+    <linearGradient id="jb-navy" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123a6b"/>
+      <stop offset="1" stop-color="#08152b"/>
+    </linearGradient>
+    <linearGradient id="jb-j" x1="10" y1="8" x2="22" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4ab3f4"/>
+      <stop offset="1" stop-color="#2f9be6"/>
+    </linearGradient>
+    <linearGradient id="jb-b" x1="20" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded navy badge -->
+  <rect x="0.5" y="0.5" width="39" height="39" rx="12" fill="url(#jb-navy)" stroke="#2f9be6" stroke-opacity="0.35"/>
+
+  <!-- Accent dots (green / cyan / purple / yellow) -->
+  <circle cx="9" cy="8.5" r="1.7" fill="#22c55e"/>
+  <circle cx="14.2" cy="8.5" r="1.7" fill="#38bdf8"/>
+  <circle cx="19.4" cy="8.5" r="1.7" fill="#8b5cf6"/>
+  <circle cx="24.6" cy="8.5" r="1.7" fill="#facc15"/>
+
+  <!-- J -->
+  <path d="M20.5 13.5V26.2C20.5 29.4 18.4 31.3 15.3 31.3C12.9 31.3 11 30.1 10.2 27.9L13.1 26.4C13.4 27.4 13.9 28 14.9 28C16 28 16.7 27.3 16.7 25.9V13.5H20.5Z" fill="url(#jb-j)"/>
+  <!-- B -->
+  <path d="M22.6 13.5H28.1C30.6 13.5 32.3 14.9 32.3 17.1C32.3 18.4 31.7 19.4 30.7 19.9C32.1 20.4 32.9 21.6 32.9 23.1C32.9 25.5 31.1 27 28.4 27H22.6V13.5ZM27.7 18.9C28.6 18.9 29.1 18.4 29.1 17.6C29.1 16.8 28.6 16.3 27.7 16.3H25.9V18.9H27.7ZM28 24.2C28.9 24.2 29.5 23.7 29.5 22.8C29.5 22 28.9 21.5 28 21.5H25.9V24.2H28Z" fill="url(#jb-b)"/>
+
+  <!-- Wordmark -->
+  <text x="48" y="20" font-family="'Space Grotesk','Segoe UI',sans-serif" font-size="17" font-weight="700" letter-spacing="-0.3" fill="#eaf2ff">Job</text>
+  <text x="80.5" y="20" font-family="'Space Grotesk','Segoe UI',sans-serif" font-size="17" font-weight="700" letter-spacing="-0.3" fill="#f97316">Board</text>
+  <text x="48.5" y="32" font-family="'JetBrains Mono',monospace" font-size="6.7" letter-spacing="3.1" fill="#4ab3f4">TECH · CAREERS</text>
+</svg>

@@ -1,29 +1,43 @@
 .badge {
-  display: inline-block;
-  padding: 0.15rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   line-height: 1.4;
   white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .badge[data-tone='info'] {
-  background: #e0edff;
-  color: #1d4ed8;
+  color: var(--cyan-400);
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
 }
-
 .badge[data-tone='success'] {
-  background: #dcfce7;
-  color: #15803d;
+  color: var(--green-400);
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.32);
 }
-
 .badge[data-tone='danger'] {
-  background: #fee2e2;
-  color: #b91c1c;
+  color: var(--red-400);
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
 }
-
 .badge[data-tone='muted'] {
-  background: #eceef1;
-  color: #4b5563;
+  color: var(--text-lo);
+  background: rgba(120, 160, 220, 0.08);
+  border-color: var(--line);
 }

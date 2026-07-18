@@ -1,26 +1,41 @@
 <header class="topbar">
-  <nav class="topbar__nav">
-    <a class="topbar__brand" routerLink="/">JobBoard</a>
-    <a routerLink="/jobs" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-      Jobs
+  <div class="topbar__inner">
+    <a class="topbar__brand" routerLink="/" aria-label="JobBoard home">
+      <img src="logo.svg" alt="JobBoard" height="34" />
     </a>
-    @if (isEmployer()) {
-      <a routerLink="/jobs/new" routerLinkActive="active">Post a job</a>
-    }
-    @if (isCandidate()) {
-      <a routerLink="/applications" routerLinkActive="active">My applications</a>
-    }
-  </nav>
 
-  <div class="topbar__auth">
-    @if (isAuthenticated()) {
-      <button type="button" class="topbar__logout" (click)="logout()">Log out</button>
-    } @else {
-      <a routerLink="/login" routerLinkActive="active">Log in</a>
-    }
+    <nav class="topbar__nav" aria-label="Primary">
+      <a routerLink="/jobs" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Jobs
+      </a>
+      @if (isEmployer()) {
+        <a routerLink="/jobs/new" routerLinkActive="active">Post a job</a>
+      }
+      @if (isCandidate()) {
+        <a routerLink="/applications" routerLinkActive="active">My applications</a>
+      }
+    </nav>
+
+    <div class="topbar__auth">
+      @if (isAuthenticated()) {
+        <button type="button" class="btn btn--ghost topbar__logout" (click)="logout()">
+          Log out
+        </button>
+      } @else {
+        <a class="topbar__login" routerLink="/login" routerLinkActive="active">Log in</a>
+        <a class="btn btn--cta topbar__cta" routerLink="/register">Get started</a>
+      }
+    </div>
   </div>
 </header>
 
 <main class="content">
   <router-outlet />
 </main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <span class="site-footer__brand gradient-text">JobBoard</span>
+    <span>A microservice showcase on Aspire · ASP.NET Core · Angular.</span>
+  </div>
+</footer>

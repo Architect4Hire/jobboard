@@ -17,6 +17,10 @@ var notificationsDb = postgres.AddDatabase("notificationsdb");
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
     ?? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
+// Local Redis (a container) backing the Jobs facade's job-list cache. Only Jobs references it for now
+// (this is a one-service cache); connection details are injected via WithReference, never hardcoded.
+var cache = builder.AddRedis("cache");
+
 // Azure Service Bus, run locally as the emulator container (plus its mssql companion) — no cloud
 // resource. Topics/subscriptions are declared per event as services are introduced.
 var serviceBus = builder.AddAzureServiceBus("servicebus")
@@ -43,12 +47,15 @@ serviceBus.AddServiceBusTopic("ApplicationStatusChanged")
 serviceBus.AddServiceBusTopic("JobPosted")
     .AddServiceBusSubscription("notifications-jobposted");
 
-// First bounded service: owns jobsdb and talks to the bus (outbox dispatcher + processor host).
+// First bounded service: owns jobsdb, talks to the bus (outbox dispatcher + processor host), and caches
+// its job list in Redis (the only service wired to the cache for now).
 var jobs = builder.AddProject<Projects.JobBoard_Jobs>("jobs")
     .WithReference(jobsDb)
     .WithReference(serviceBus)
+    .WithReference(cache)
     .WaitFor(jobsDb)
-    .WaitFor(serviceBus);   // jobs runs the outbox dispatcher + processor host, so it uses the bus
+    .WaitFor(serviceBus)    // jobs runs the outbox dispatcher + processor host, so it uses the bus
+    .WaitFor(cache);
 
 // Second bounded service: owns applicationsdb, publishes ApplicationSubmitted/ApplicationStatusChanged,
 // and consumes Jobs' JobClosed (via the "applications" subscription declared above).

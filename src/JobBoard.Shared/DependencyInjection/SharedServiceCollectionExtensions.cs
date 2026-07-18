@@ -1,4 +1,5 @@
 using JobBoard.Contracts;
+using JobBoard.Shared.Caching;
 using JobBoard.Shared.Errors;
 using JobBoard.Shared.Messaging;
 using JobBoard.Shared.Persistence;
@@ -110,6 +111,17 @@ public static class SharedServiceCollectionExtensions
         }
 
         return registry;
+    }
+
+    /// <summary>
+    /// Registers the <see cref="ICache"/> facade cache (<see cref="RedisCache"/>). Assumes the host has
+    /// registered an <c>IDistributedCache</c> — in this stack via the Aspire <c>AddRedisDistributedCache</c>
+    /// integration keyed to the AppHost <c>cache</c> resource. Only services that cache call this.
+    /// </summary>
+    public static IServiceCollection AddSharedCaching(this IServiceCollection services)
+    {
+        services.TryAddScoped<ICache, RedisCache>();
+        return services;
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ describe('App', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.topbar__brand')?.textContent).toContain('JobBoard');
+    expect(compiled.querySelector('.topbar__brand img')?.getAttribute('alt')).toContain('JobBoard');
     expect(compiled.querySelector('.topbar__auth a')?.textContent).toContain('Log in');
   });
 });

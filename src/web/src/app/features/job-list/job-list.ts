@@ -8,9 +8,9 @@ import { JobService } from '../../core/api/job.service';
 import { JobStatus, JobSummary } from '../../core/models/job.model';
 
 /**
- * The job board: cards for every posting, filterable by category. Fetches the list once through
- * JobService (gateway `/jobs`) and filters client-side so the category options stay stable and switching
- * is instant. `toSignal` owns the subscription — no manual teardown.
+ * The job board: cards for every posting, filterable by category and free-text search. Fetches the list
+ * once through JobService (gateway `/jobs`) and filters client-side so the category options stay stable
+ * and switching is instant. `toSignal` owns the subscription — no manual teardown.
  */
 @Component({
   selector: 'app-job-list',
@@ -35,6 +35,7 @@ export class JobList {
   );
 
   protected readonly selectedCategory = signal<string | null>(null);
+  protected readonly query = signal('');
 
   /** Distinct category slugs across all postings, for the filter bar. */
   protected readonly categories = computed(() => {
@@ -42,19 +43,63 @@ export class JobList {
     return jobs ? [...new Set(jobs.flatMap((job) => job.categorySlugs))].sort() : [];
   });
 
-  /** The postings to show — all, or those in the selected category. undefined while loading. */
+  /** The postings to show — filtered by the selected category and the search text. undefined while loading. */
   protected readonly visibleJobs = computed(() => {
     const jobs = this.jobs();
     if (!jobs) {
       return undefined;
     }
     const category = this.selectedCategory();
-    return category ? jobs.filter((job) => job.categorySlugs.includes(category)) : jobs;
+    const term = this.query().trim().toLowerCase();
+    return jobs.filter((job) => {
+      const inCategory = !category || job.categorySlugs.includes(category);
+      const matches =
+        !term ||
+        job.title.toLowerCase().includes(term) ||
+        job.location.toLowerCase().includes(term) ||
+        job.categorySlugs.some((slug) => slug.includes(term));
+      return inCategory && matches;
+    });
   });
+
+  /** Count of open postings across the whole board (not just the current filter). */
+  protected readonly openCount = computed(
+    () => this.jobs()?.filter((job) => job.status === JobStatus.Open).length ?? 0,
+  );
 
   protected readonly JobStatus = JobStatus;
 
   protected select(category: string | null): void {
     this.selectedCategory.set(category);
+  }
+
+  protected onSearch(value: string): void {
+    this.query.set(value);
+  }
+
+  /** A one/two-letter monogram from the posting title, for the card's badge. */
+  protected monogram(title: string): string {
+    const words = title.split(/\s+/).filter(Boolean);
+    const letters = (words[0]?.[0] ?? '') + (words[1]?.[0] ?? '');
+    return letters.toUpperCase() || '·';
+  }
+
+  /** True when the posting is remote-friendly (drives the little "Remote" pill). */
+  protected isRemote(location: string): boolean {
+    return /remote|anywhere/i.test(location);
+  }
+
+  /** Human "posted N days/weeks ago" from an ISO timestamp. */
+  protected postedLabel(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) {
+      return '';
+    }
+    const days = Math.max(0, Math.round((Date.now() - then) / 86_400_000));
+    if (days === 0) return 'Posted today';
+    if (days === 1) return 'Posted 1 day ago';
+    if (days < 7) return `Posted ${days} days ago`;
+    const weeks = Math.round(days / 7);
+    return weeks === 1 ? 'Posted 1 week ago' : `Posted ${weeks} weeks ago`;
   }
 }

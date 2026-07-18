@@ -28,6 +28,9 @@ if (app.Environment.IsDevelopment())
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ProfilesDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed demo candidate/employer profiles for the seeded accounts (idempotent).
+    await JobBoard.Profiles.Core.Seeding.ProfilesSeedData.SeedAsync(db);
 }
 
 app.UseExceptionHandler();

@@ -90,4 +90,11 @@ export class JobDetail {
         },
       });
   }
+
+  /** A one/two-letter monogram from the posting title, for the header badge. */
+  protected monogram(title: string): string {
+    const words = title.split(/\s+/).filter(Boolean);
+    const letters = (words[0]?.[0] ?? '') + (words[1]?.[0] ?? '');
+    return letters.toUpperCase() || '·';
+  }
 }

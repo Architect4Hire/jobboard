@@ -1,9 +1,10 @@
 namespace JobBoard.Shared.Caching;
 
 /// <summary>
-/// The cache abstraction a service's facade uses to read-through and invalidate its ServiceModels. Only
-/// the contract lives here; the Redis-backed implementation arrives with the Aspire cache wiring. Keeping
-/// facades on this interface means they never bind to a concrete cache client.
+/// The cache abstraction a service's facade uses to read-through and invalidate its ServiceModels. The
+/// contract lives here; <see cref="RedisCache"/> is the implementation (an <c>IDistributedCache</c> adapter,
+/// Redis-backed via the host's Aspire cache wiring). Keeping facades on this interface means they never
+/// bind to a concrete cache client.
 /// </summary>
 public interface ICache
 {

@@ -27,6 +27,10 @@ if (app.Environment.IsDevelopment())
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed known demo accounts (idempotent) so a reviewer can sign in without registering.
+    var hasher = scope.ServiceProvider.GetRequiredService<JobBoard.Identity.Core.Security.IPasswordHasher>();
+    await JobBoard.Identity.Core.Seeding.IdentitySeedData.SeedAsync(db, hasher);
 }
 
 app.UseExceptionHandler();

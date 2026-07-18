@@ -35,6 +35,9 @@ if (app.Environment.IsDevelopment())
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationsDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed demo applications for the seeded candidate (idempotent) so "My applications" has content.
+    await JobBoard.Applications.Core.Seeding.ApplicationsSeedData.SeedAsync(db);
 }
 
 app.UseExceptionHandler();
