@@ -6,9 +6,11 @@ namespace JobBoard.Jobs.Core.Seeding;
 
 /// <summary>
 /// Development-only demo data for jobsdb: a set of prototypical ASP.NET Core / Angular / Azure roles so
-/// the board has realistic content to review. Idempotent — no-ops once any job exists. Categories and
-/// tags are de-duplicated by slug and shared across postings, mirroring how the repository reconciles
-/// classifications. <see cref="EmployerId"/> is the well-known employer account id (duplicated by literal
+/// the board has realistic content to review. Idempotent per job — each well-known <see cref="JobId"/> is
+/// seeded only if it's missing, so a developer can add a demo posting and it lands on the next start
+/// without wiping the volume. Categories and tags are de-duplicated by slug and shared across postings —
+/// existing rows are pre-loaded so a newly-added job reuses them instead of duplicating, mirroring how the
+/// repository reconciles classifications. <see cref="EmployerId"/> is the well-known employer account id (duplicated by literal
 /// from Identity's seeder — reference data, not a cross-service FK). Owns only jobsdb.
 /// </summary>
 public static class JobsSeedData
@@ -25,14 +27,12 @@ public static class JobsSeedData
 
     public static async Task SeedAsync(JobsDbContext db, CancellationToken cancellationToken = default)
     {
-        if (await db.Jobs.AnyAsync(cancellationToken))
-        {
-            return;
-        }
-
-        // De-duplicated classification pools, keyed by slug so a slug maps to exactly one row.
-        var categories = new Dictionary<string, Category>();
-        var tags = new Dictionary<string, Tag>();
+        // De-duplicated classification pools, keyed by slug so a slug maps to exactly one row. Pre-loaded
+        // with what's already in the db so a newly-added job reuses existing Category/Tag rows by slug
+        // rather than inserting duplicates (the seeder writes directly, bypassing the repository's own
+        // slug reconciliation).
+        var categories = await db.Categories.ToDictionaryAsync(c => c.Slug, cancellationToken);
+        var tags = await db.Tags.ToDictionaryAsync(t => t.Slug, cancellationToken);
 
         Category category(string name, string slug) =>
             categories.TryGetValue(slug, out var existing)
@@ -139,7 +139,17 @@ public static class JobsSeedData
                 new[] { frontend }, new[] { "angular", "typescript", "storybook", "accessibility" }),
         };
 
-        db.Jobs.AddRange(jobs);
+        // Per-id guard: seed only the postings whose well-known id isn't already present. Categories and
+        // tags reachable only from skipped jobs stay untracked (never added); those reachable from a new
+        // job are added transitively, reusing any pre-loaded existing row for the same slug.
+        var seededJobIds = jobs.Select(j => j.Id).ToList();
+        var existingJobIds = await db.Jobs
+            .Where(j => seededJobIds.Contains(j.Id))
+            .Select(j => j.Id)
+            .ToListAsync(cancellationToken);
+        var existing = existingJobIds.ToHashSet();
+
+        db.Jobs.AddRange(jobs.Where(j => !existing.Contains(j.Id)));
         await db.SaveChangesAsync(cancellationToken);
     }
 }

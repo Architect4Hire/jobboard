@@ -1,4 +1,5 @@
 using FluentValidation;
+using JobBoard.Shared.Errors;
 using JobBoard.Profiles.Core.Facade;
 using JobBoard.Profiles.Core.Managers.Models.ServiceModels;
 using JobBoard.Profiles.Core.Managers.Validators;
@@ -11,7 +12,7 @@ namespace JobBoard.Profiles.Tests;
 public sealed class ProfileFacadeTests
 {
     private static readonly CandidateProfileServiceModel AnyCandidate =
-        new(Guid.NewGuid(), "Engineer", "Summary", ["c#"], null, DateTime.UtcNow);
+        new(Guid.NewGuid(), "Engineer", "Summary", ["c#"], null, null, null, null, null, null, null, null, null, null, null, DateTime.UtcNow);
 
     private static readonly EmployerProfileServiceModel AnyEmployer =
         new(Guid.NewGuid(), "Acme", null, "Desc", DateTime.UtcNow);
@@ -42,6 +43,52 @@ public sealed class ProfileFacadeTests
         await Assert.ThrowsAsync<ValidationException>(
             () => facade.UpsertAsync(Guid.NewGuid(), TestData.CandidateViewModel(headline: "")));
         Assert.Equal(0, business.UpsertCallCount);
+    }
+
+    [Fact]
+    public async Task Candidate_UploadResume_Oversized_Throws_AndNeverReachesBusiness()
+    {
+        var business = new FakeCandidateProfileBusiness { UpsertResult = AnyCandidate };
+        var facade = CreateCandidateFacade(business);
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() => facade.UploadResumeAsync(
+            Guid.NewGuid(),
+            new MemoryStream([1, 2, 3]),
+            length: CandidateProfileFacade.MaxResumeBytes + 1,
+            contentType: "application/pdf",
+            fileName: "cv.pdf"));
+
+        Assert.Equal("candidate_profile.resume_invalid", ex.Code);
+        Assert.Equal(0, business.UploadResumeCallCount);
+    }
+
+    [Fact]
+    public async Task Candidate_UploadResume_UnsupportedType_Throws_AndNeverReachesBusiness()
+    {
+        var business = new FakeCandidateProfileBusiness { UpsertResult = AnyCandidate };
+        var facade = CreateCandidateFacade(business);
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() => facade.UploadResumeAsync(
+            Guid.NewGuid(),
+            new MemoryStream([1, 2, 3]),
+            length: 3,
+            contentType: "text/plain",
+            fileName: "notes.txt"));
+
+        Assert.Equal("candidate_profile.resume_invalid", ex.Code);
+        Assert.Equal(0, business.UploadResumeCallCount);
+    }
+
+    [Fact]
+    public async Task Candidate_UploadResume_Valid_DelegatesToBusiness()
+    {
+        var business = new FakeCandidateProfileBusiness { UpsertResult = AnyCandidate };
+        var facade = CreateCandidateFacade(business);
+
+        await facade.UploadResumeAsync(
+            Guid.NewGuid(), new MemoryStream([1, 2, 3]), length: 3, contentType: "application/pdf", fileName: "cv.pdf");
+
+        Assert.Equal(1, business.UploadResumeCallCount);
     }
 
     [Fact]

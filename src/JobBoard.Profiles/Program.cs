@@ -10,6 +10,10 @@ builder.AddServiceDefaults();
 // (connection injected by the AppHost — never a raw connection string).
 builder.AddNpgsqlDbContext<ProfilesDbContext>("profilesdb");
 
+// BlobServiceClient for résumé storage, keyed to the AppHost "blobs" resource (Azurite locally). The
+// connection is injected by Aspire; IResumeStorage in .Core types against this client.
+builder.AddAzureBlobServiceClient("blobs");
+
 // Composition: the .Core stacks (candidate + employer, each facade → business → data → repository +
 // validators). Profiles publishes and consumes no integration events, so there is no Service Bus client
 // and no shared messaging spine; it validates no tokens (the gateway does) — only the shared exception

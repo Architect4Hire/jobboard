@@ -6,8 +6,9 @@ namespace JobBoard.Profiles.Core.Seeding;
 
 /// <summary>
 /// Development-only demo data for profilesdb: a candidate résumé profile and an employer company profile
-/// for the seeded accounts, so the profile surfaces have realistic content. Idempotent — no-ops once any
-/// profile exists. Ids are duplicated by literal from Identity's seeder (each profile's id <b>is</b> the
+/// for the seeded accounts, so the profile surfaces have realistic content. Idempotent per profile —
+/// each well-known id is seeded only if it's missing, so a developer can add a demo profile and it lands
+/// on the next start without wiping the volume. Ids are duplicated by literal from Identity's seeder (each profile's id <b>is</b> the
 /// owning account id — reference data, not a cross-service FK). Owns only profilesdb.
 /// </summary>
 public static class ProfilesSeedData
@@ -20,7 +21,7 @@ public static class ProfilesSeedData
     {
         var now = DateTime.UtcNow;
 
-        if (!await db.CandidateProfiles.AnyAsync(cancellationToken))
+        if (!await db.CandidateProfiles.AnyAsync(p => p.Id == CandidateId, cancellationToken))
         {
             db.CandidateProfiles.Add(new CandidateProfile
             {
@@ -35,12 +36,21 @@ public static class ProfilesSeedData
                     "C#", ".NET", "ASP.NET Core", "EF Core", "PostgreSQL", "Azure",
                     "Angular", "TypeScript", "RxJS", "Docker", "Microservices", "Azure Service Bus",
                 ],
-                ResumeUrl = "https://jobboard.dev/resumes/demo-candidate.pdf",
+                FullName = "Alex Candidate",
+                Location = "Austin, TX (Remote)",
+                Phone = "+1 (512) 555-0142",
+                LinkedInUrl = "https://www.linkedin.com/in/alex-candidate",
+                GitHubUrl = "https://github.com/alex-candidate",
+                PortfolioUrl = "https://alex.dev",
+                YearsOfExperience = 8,
+                DesiredRole = "Senior Full-Stack Engineer",
+                Availability = CandidateAvailability.WithinTwoWeeks,
+                // No résumé blob is seeded — the file is uploaded through the résumé endpoint at runtime.
                 UpdatedOnUtc = now,
             });
         }
 
-        if (!await db.EmployerProfiles.AnyAsync(cancellationToken))
+        if (!await db.EmployerProfiles.AnyAsync(p => p.Id == EmployerId, cancellationToken))
         {
             db.EmployerProfiles.Add(new EmployerProfile
             {

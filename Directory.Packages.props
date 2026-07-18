@@ -29,6 +29,8 @@
     <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
+    <!-- Profiles: Azure Storage run as the Azurite emulator (a local container), backing résumé uploads -->
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.6" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +39,8 @@
     <PackageVersion Include="Aspire.Azure.Messaging.ServiceBus" Version="13.4.6" />
     <!-- Jobs host: Redis-backed IDistributedCache client integration (facade job-list cache) -->
     <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.4.6" />
+    <!-- Profiles host: Azure Blob Storage client integration (BlobServiceClient for résumé blobs) -->
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="13.4.6" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,6 +68,13 @@
     <!-- JobBoard.Shared: Service Bus SDK types for the outbox dispatcher + processor host (the
          AddAzureServiceBusClient integration is added per-host, not here) -->
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JobBoard.Profiles.Core: Azure Blob Storage SDK types (BlobServiceClient) for résumé storage.
+         The BlobServiceClient itself is registered in the host via the Aspire client integration; Core
+         references the SDK so IResumeStorage's implementation can type against it. -->
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
   </ItemGroup>
 
   <ItemGroup>

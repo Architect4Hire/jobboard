@@ -295,6 +295,15 @@ flowchart LR
     CORE --> CTR
 ```
 
+## Documentation & roadmap
+
+The design, decisions, and plans live in [`docs/`](docs/README.md). Two roadmaps sit side by side and answer different questions:
+
+- **[Ongoing Architecture Plan](docs/ongoing-architecture-plan.md)** — *is what we built engineered correctly, secure, and operable?* A grounded review of the spike with a ranked risk table and a **30/60/90-day** hardening plan (the identity seam, CI/deploy, observability, scale-out).
+- **[Product Completeness](docs/product-completeness.md)** — *as a job board, what can't a user do yet that they'd expect to?* A capability-by-capability inventory of the **product** gaps — the employer applicant-review funnel, server-side search, account lifecycle, real notifications — each named to the service it lands in, with a value-tiered build order. Start here for "what to build next."
+
+See the full [documentation index](docs/README.md) for the High-Level Design, ADRs, and build guides.
+
 ## Getting started
 
 1. Prerequisites: the .NET 10 SDK, the Aspire CLI, Node.js, and a container runtime (Docker/Podman).

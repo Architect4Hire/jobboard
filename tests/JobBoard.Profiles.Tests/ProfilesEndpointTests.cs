@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using JobBoard.Profiles.Core.Managers.Models.ServiceModels;
 using Xunit;
 
@@ -68,9 +70,73 @@ public sealed class ProfilesEndpointTests
         // Explicit "skills": null in the body — must be a validation 400, never an unhandled 500.
         var response = await client.PutAsJsonAsync(
             $"/profiles/candidates/{Guid.NewGuid()}",
-            new { headline = "Dev", summary = "Summary", skills = (string[]?)null, resumeUrl = (string?)null });
+            new { headline = "Dev", summary = "Summary", skills = (string[]?)null });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Candidate_Resume_Upload_Download_Delete_Lifecycle()
+    {
+        using var factory = new ProfilesApiFactory();
+        var client = factory.CreateClient();
+        var candidateId = Guid.NewGuid();
+
+        // A résumé needs a profile to attach to — create one first.
+        Assert.Equal(HttpStatusCode.OK,
+            (await client.PutAsJsonAsync($"/profiles/candidates/{candidateId}", TestData.CandidateViewModel())).StatusCode);
+
+        // Upload (multipart) — the profile now carries the download path + original filename.
+        var upload = await client.PostAsync($"/profiles/candidates/{candidateId}/resume", ResumeForm("%PDF-1.4 fake", "resume.pdf"));
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        var uploaded = await upload.Content.ReadFromJsonAsync<CandidateProfileServiceModel>();
+        Assert.Equal($"/profiles/candidates/{candidateId}/resume", uploaded!.ResumeUrl);
+        Assert.Equal("resume.pdf", uploaded.ResumeFileName);
+        Assert.Equal(1, factory.ResumeStorage.UploadCount);
+
+        // Download streams the bytes back with the stored content type.
+        var download = await client.GetAsync($"/profiles/candidates/{candidateId}/resume");
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        Assert.Equal("application/pdf", download.Content.Headers.ContentType!.MediaType);
+        Assert.Equal("%PDF-1.4 fake", await download.Content.ReadAsStringAsync());
+
+        // Delete clears the résumé; the download then 404s and the profile shows no résumé.
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"/profiles/candidates/{candidateId}/resume")).StatusCode);
+        var afterDelete = await client.GetFromJsonAsync<CandidateProfileServiceModel>($"/profiles/candidates/{candidateId}");
+        Assert.Null(afterDelete!.ResumeUrl);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/profiles/candidates/{candidateId}/resume")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Candidate_Resume_Upload_NoProfile_Returns404()
+    {
+        using var factory = new ProfilesApiFactory();
+        var client = factory.CreateClient();
+
+        var upload = await client.PostAsync($"/profiles/candidates/{Guid.NewGuid()}/resume", ResumeForm("pdf", "resume.pdf"));
+
+        Assert.Equal(HttpStatusCode.NotFound, upload.StatusCode);
+    }
+
+    [Fact]
+    public async Task Candidate_Resume_Upload_UnsupportedType_Returns400()
+    {
+        using var factory = new ProfilesApiFactory();
+        var client = factory.CreateClient();
+        var candidateId = Guid.NewGuid();
+        await client.PutAsJsonAsync($"/profiles/candidates/{candidateId}", TestData.CandidateViewModel());
+
+        var upload = await client.PostAsync(
+            $"/profiles/candidates/{candidateId}/resume", ResumeForm("just text", "notes.txt", "text/plain"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, upload.StatusCode);
+    }
+
+    private static MultipartFormDataContent ResumeForm(string content, string fileName, string contentType = "application/pdf")
+    {
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        return new MultipartFormDataContent { { file, "file", fileName } };
     }
 
     [Fact]

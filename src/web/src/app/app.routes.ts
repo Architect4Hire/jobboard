@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guard';
+import { employerGuard } from './core/auth/employer.guard';
 
 /**
- * The app's routes. Everything is lazily loaded; the two employer/candidate pages are gated by authGuard
- * (redirects to /login when signed out). All data still flows through the typed services to the gateway —
- * routing only decides which screen is shown.
+ * The app's routes. Everything is lazily loaded; the employer/candidate pages are gated (redirects to
+ * /login when signed out). Posting a job is employer-only via employerGuard. All data still flows through
+ * the typed services to the gateway — routing only decides which screen is shown.
  */
 export const routes: Routes = [
   {
@@ -18,8 +19,9 @@ export const routes: Routes = [
   },
   {
     path: 'jobs/new',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/post-job-form/post-job-form').then((m) => m.PostJobForm),
+    canActivate: [employerGuard],
+    loadComponent: () =>
+      import('./features/post-job-form/post-job-form').then((m) => m.PostJobForm),
   },
   {
     path: 'jobs/:id',
@@ -30,6 +32,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/application-list/application-list').then((m) => m.ApplicationList),
+  },
+  {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/candidate-profile/candidate-profile').then((m) => m.CandidateProfile),
   },
   {
     path: 'login',

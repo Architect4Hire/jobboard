@@ -1,0 +1,113 @@
+.profile-wrap {
+  max-width: 760px;
+}
+.profile-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1.6rem;
+}
+.profile-head h1 {
+  margin: 0.4rem 0 0;
+  font-size: 1.9rem;
+}
+.profile-head__lede {
+  margin: 0;
+  color: var(--text-mid);
+  font-size: 0.95rem;
+}
+
+.profile-status {
+  color: var(--text-mid);
+}
+
+.profile {
+  padding: 1.8rem 1.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.profile-section__title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-mid);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  padding-bottom: 0.5rem;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.profile__error {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--red-400);
+  font-size: 0.85rem;
+}
+.profile__saved {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: var(--green-400, #4ade80);
+  font-size: 0.85rem;
+}
+.profile__submit {
+  align-self: flex-start;
+}
+
+/* Résumé card */
+.resume {
+  margin-top: 1.5rem;
+}
+.resume__current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+.resume__file {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resume__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.resume__remove {
+  color: var(--red-400);
+}
+.resume__empty {
+  margin: 0;
+  color: var(--text-mid);
+  font-size: 0.9rem;
+}
+.resume__upload {
+  align-self: flex-start;
+  cursor: pointer;
+}
+.resume__hint {
+  margin: 0;
+  color: var(--text-mid);
+  font-size: 0.8rem;
+}

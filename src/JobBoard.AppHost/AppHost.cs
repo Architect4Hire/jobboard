@@ -21,6 +21,13 @@ var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
 // (this is a one-service cache); connection details are injected via WithReference, never hardcoded.
 var cache = builder.AddRedis("cache");
 
+// Azure Storage, run locally as the Azurite emulator container — no cloud resource (the RunAsEmulator
+// twin of the Service Bus emulator below). Backs candidate résumé uploads; only Profiles references it.
+// The "blobs" child is the Blob service the Profiles host binds a BlobServiceClient to via WithReference.
+var resumeBlobs = builder.AddAzureStorage("storage")
+    .RunAsEmulator()
+    .AddBlobs("blobs");
+
 // Azure Service Bus, run locally as the emulator container (plus its mssql companion) — no cloud
 // resource. Topics/subscriptions are declared per event as services are introduced.
 var serviceBus = builder.AddAzureServiceBus("servicebus")
@@ -75,10 +82,13 @@ var identity = builder.AddProject<Projects.JobBoard_Identity>("identity")
 
 // Profiles: owns profilesdb (candidate résumés + employer company profiles). Synchronous
 // request/response service — it publishes/consumes no events (no Service Bus) and validates no tokens
-// (the gateway does), so it takes neither a bus reference nor the signing key.
+// (the gateway does), so it takes neither a bus reference nor the signing key. References the "blobs"
+// storage resource for résumé file uploads (connection injected via WithReference, never hardcoded).
 var profiles = builder.AddProject<Projects.JobBoard_Profiles>("profiles")
     .WithReference(profilesDb)
-    .WaitFor(profilesDb);
+    .WithReference(resumeBlobs)
+    .WaitFor(profilesDb)
+    .WaitFor(resumeBlobs);
 
 // Notifications: owns notificationsdb, consumes JobPosted + ApplicationSubmitted + ApplicationStatusChanged
 // and logs each. Event-only — no public HTTP surface, so the gateway does NOT reference it. Runs the

@@ -1,0 +1,186 @@
+<div class="profile-wrap page">
+  <header class="profile-head">
+    <span class="eyebrow">Candidate</span>
+    <h1>Your profile</h1>
+    <p class="profile-head__lede">
+      Tell employers who you are, and upload a résumé they can download.
+    </p>
+  </header>
+
+  @if (loading()) {
+    <p class="profile-status">Loading your profile…</p>
+  } @else {
+    <form class="profile surface" [formGroup]="form" (ngSubmit)="save()">
+      <section class="profile-section">
+        <h2 class="profile-section__title">Headline &amp; summary</h2>
+
+        <label class="field">
+          <span class="field__label">Headline</span>
+          <input
+            type="text"
+            formControlName="headline"
+            placeholder="Full-Stack .NET + Angular Engineer"
+          />
+          @if (form.controls.headline.touched && form.controls.headline.invalid) {
+            <span class="field__error">A headline is required (up to 200 characters).</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Summary</span>
+          <textarea
+            rows="5"
+            formControlName="summary"
+            placeholder="What you build, the stack you love, and what you're looking for…"
+          ></textarea>
+          @if (form.controls.summary.touched && form.controls.summary.invalid) {
+            <span class="field__error">A summary is required.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Skills <em>(comma-separated)</em></span>
+          <input
+            type="text"
+            formControlName="skills"
+            placeholder="C#, ASP.NET Core, Angular, Azure"
+          />
+        </label>
+      </section>
+
+      <section class="profile-section">
+        <h2 class="profile-section__title">Contact &amp; location</h2>
+        <div class="profile-grid">
+          <label class="field">
+            <span class="field__label">Full name</span>
+            <input type="text" formControlName="fullName" placeholder="Alex Candidate" />
+          </label>
+          <label class="field">
+            <span class="field__label">Location</span>
+            <input type="text" formControlName="location" placeholder="Austin, TX (Remote)" />
+          </label>
+          <label class="field">
+            <span class="field__label">Phone</span>
+            <input type="tel" formControlName="phone" placeholder="+1 (512) 555-0142" />
+          </label>
+        </div>
+      </section>
+
+      <section class="profile-section">
+        <h2 class="profile-section__title">Professional links</h2>
+        <div class="profile-grid">
+          <label class="field">
+            <span class="field__label">LinkedIn</span>
+            <input
+              type="url"
+              formControlName="linkedInUrl"
+              placeholder="https://linkedin.com/in/you"
+            />
+          </label>
+          <label class="field">
+            <span class="field__label">GitHub</span>
+            <input type="url" formControlName="gitHubUrl" placeholder="https://github.com/you" />
+          </label>
+          <label class="field">
+            <span class="field__label">Portfolio</span>
+            <input type="url" formControlName="portfolioUrl" placeholder="https://you.dev" />
+          </label>
+        </div>
+      </section>
+
+      <section class="profile-section">
+        <h2 class="profile-section__title">Experience &amp; availability</h2>
+        <div class="profile-grid">
+          <label class="field">
+            <span class="field__label">Years of experience</span>
+            <input
+              type="number"
+              formControlName="yearsOfExperience"
+              min="0"
+              max="70"
+              placeholder="8"
+            />
+          </label>
+          <label class="field">
+            <span class="field__label">Desired role</span>
+            <input
+              type="text"
+              formControlName="desiredRole"
+              placeholder="Senior Full-Stack Engineer"
+            />
+          </label>
+          <label class="field">
+            <span class="field__label">Availability</span>
+            <select formControlName="availability">
+              <option [ngValue]="null">Select…</option>
+              @for (option of availabilityOptions; track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </section>
+
+      @if (error(); as message) {
+        <p class="profile__error" role="alert">{{ message }}</p>
+      }
+      @if (saved()) {
+        <p class="profile__saved" role="status">Profile saved.</p>
+      }
+
+      <button type="submit" class="btn btn--cta profile__submit" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : 'Save profile' }}
+      </button>
+    </form>
+
+    <section class="profile surface resume">
+      <h2 class="profile-section__title">Résumé</h2>
+
+      @if (hasResume()) {
+        <div class="resume__current">
+          <span class="resume__file" title="{{ profile()?.resumeFileName }}">
+            📄 {{ profile()?.resumeFileName }}
+          </span>
+          <div class="resume__actions">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              (click)="downloadResume()"
+              [disabled]="uploadingResume()"
+            >
+              Download
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost resume__remove"
+              (click)="removeResume()"
+              [disabled]="uploadingResume()"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      } @else {
+        <p class="resume__empty">No résumé uploaded yet.</p>
+      }
+
+      <label class="resume__upload">
+        <span class="btn btn--primary">
+          {{ uploadingResume() ? 'Uploading…' : hasResume() ? 'Replace résumé' : 'Upload résumé' }}
+        </span>
+        <input
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          (change)="onResumeSelected($event)"
+          [disabled]="uploadingResume()"
+          hidden
+        />
+      </label>
+      <p class="resume__hint">PDF or Word document, up to 5 MB.</p>
+
+      @if (resumeError(); as message) {
+        <p class="profile__error" role="alert">{{ message }}</p>
+      }
+    </section>
+  }
+</div>

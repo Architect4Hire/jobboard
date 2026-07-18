@@ -10,13 +10,22 @@ internal static class TestData
         Guid? id = null,
         string headline = "Senior Engineer",
         IEnumerable<string>? skills = null,
-        string? resumeUrl = "https://example.com/cv.pdf") => new()
+        string? resumeObjectName = null,
+        string? resumeFileName = null) => new()
     {
         Id = id ?? Guid.NewGuid(),
         Headline = headline,
         Summary = "Ten years building things.",
         Skills = skills?.ToList() ?? ["c#", "sql"],
-        ResumeUrl = resumeUrl,
+        FullName = "Sam Example",
+        Location = "Remote",
+        LinkedInUrl = "https://linkedin.com/in/sam",
+        YearsOfExperience = 10,
+        DesiredRole = "Staff Engineer",
+        Availability = CandidateAvailability.Immediate,
+        ResumeObjectName = resumeObjectName,
+        ResumeFileName = resumeFileName,
+        ResumeContentType = resumeObjectName is null ? null : "application/pdf",
         UpdatedOnUtc = DateTime.UtcNow,
     };
 
@@ -35,12 +44,19 @@ internal static class TestData
     public static UpsertCandidateProfileViewModel CandidateViewModel(
         string headline = "Senior Engineer",
         IReadOnlyList<string>? skills = null,
-        string? resumeUrl = "https://example.com/cv.pdf") => new()
+        string? linkedInUrl = "https://linkedin.com/in/sam",
+        int? yearsOfExperience = 10,
+        CandidateAvailability? availability = CandidateAvailability.Immediate) => new()
     {
         Headline = headline,
         Summary = "Ten years building things.",
         Skills = skills ?? ["c#", "sql"],
-        ResumeUrl = resumeUrl,
+        FullName = "Sam Example",
+        Location = "Remote",
+        LinkedInUrl = linkedInUrl,
+        YearsOfExperience = yearsOfExperience,
+        DesiredRole = "Staff Engineer",
+        Availability = availability,
     };
 
     public static UpsertEmployerProfileViewModel EmployerViewModel(

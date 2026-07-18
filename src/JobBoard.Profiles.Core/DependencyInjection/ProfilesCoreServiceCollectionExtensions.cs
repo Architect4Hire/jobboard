@@ -3,6 +3,7 @@ using JobBoard.Profiles.Core;
 using JobBoard.Profiles.Core.Business;
 using JobBoard.Profiles.Core.Data;
 using JobBoard.Profiles.Core.Facade;
+using JobBoard.Profiles.Core.Storage;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -15,9 +16,10 @@ public static class ProfilesCoreServiceCollectionExtensions
 {
     public static IServiceCollection AddProfilesCore(this IServiceCollection services)
     {
-        // Candidate profile stack.
+        // Candidate profile stack (+ résumé blob storage, backed by the host's BlobServiceClient).
         services.AddScoped<ICandidateProfileRepository, CandidateProfileRepository>();
         services.AddScoped<ICandidateProfileDataLayer, CandidateProfileDataLayer>();
+        services.AddScoped<IResumeStorage, ResumeStorage>();
         services.AddScoped<ICandidateProfileBusiness, CandidateProfileBusiness>();
         services.AddScoped<ICandidateProfileFacade, CandidateProfileFacade>();
 

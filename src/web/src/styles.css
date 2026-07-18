@@ -254,6 +254,8 @@ input[type='text'],
 input[type='email'],
 input[type='password'],
 input[type='number'],
+input[type='tel'],
+input[type='url'],
 textarea,
 select {
   width: 100%;
@@ -288,7 +290,8 @@ select:focus {
 }
 select {
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-lo) 50%),
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-lo) 50%),
     linear-gradient(135deg, var(--text-lo) 50%, transparent 50%);
   background-position:
     calc(100% - 18px) 55%,
