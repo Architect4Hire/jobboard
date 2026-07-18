@@ -7,6 +7,7 @@ var postgres = builder.AddPostgres("postgres");
 var jobsDb = postgres.AddDatabase("jobsdb");
 var applicationsDb = postgres.AddDatabase("applicationsdb");
 var identityDb = postgres.AddDatabase("identitydb");
+var profilesDb = postgres.AddDatabase("profilesdb");
 
 // Shared HMAC signing key for the JWTs Identity issues and the gateway validates. Kept out of source:
 // supplied via AppHost config/user-secrets (Jwt:SigningKey) when present, otherwise a per-run generated
@@ -60,6 +61,13 @@ var identity = builder.AddProject<Projects.JobBoard_Identity>("identity")
     .WaitFor(identityDb)
     .WithEnvironment("Jwt__SigningKey", jwtSigningKey);
 
+// Profiles: owns profilesdb (candidate résumés + employer company profiles). Synchronous
+// request/response service — it publishes/consumes no events (no Service Bus) and validates no tokens
+// (the gateway does), so it takes neither a bus reference nor the signing key.
+var profiles = builder.AddProject<Projects.JobBoard_Profiles>("profiles")
+    .WithReference(profilesDb)
+    .WaitFor(profilesDb);
+
 // The gateway is the only public entry point. It references each proxied service so YARP can resolve the
 // "http://<service>" destinations through service discovery, and the bus (a placeholder until services
 // consume it). It validates the JWTs Identity signs, so it gets the same signing key via env. The
@@ -69,11 +77,13 @@ var gateway = builder.AddProject<Projects.JobBoard_Gateway>("gateway")
     .WithReference(jobs)
     .WithReference(applications)
     .WithReference(identity)
+    .WithReference(profiles)
     .WithReference(serviceBus)
     .WithEnvironment("Jwt__SigningKey", jwtSigningKey)
     .WaitFor(jobs)
     .WaitFor(applications)
-    .WaitFor(identity);
+    .WaitFor(identity)
+    .WaitFor(profiles);
 
 // The Angular app talks only to the gateway; Aspire injects the gateway base URL and the
 // port to serve on — nothing is hardcoded.

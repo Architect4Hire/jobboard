@@ -9,6 +9,8 @@
     <Project Path="src/JobBoard.Applications.Core/JobBoard.Applications.Core.csproj" />
     <Project Path="src/JobBoard.Identity/JobBoard.Identity.csproj" />
     <Project Path="src/JobBoard.Identity.Core/JobBoard.Identity.Core.csproj" />
+    <Project Path="src/JobBoard.Profiles/JobBoard.Profiles.csproj" />
+    <Project Path="src/JobBoard.Profiles.Core/JobBoard.Profiles.Core.csproj" />
     <Project Path="src/JobBoard.ServiceDefaults/JobBoard.ServiceDefaults.csproj" />
     <Project Path="src/JobBoard.Shared/JobBoard.Shared.csproj" />
   </Folder>
@@ -17,5 +19,6 @@
     <Project Path="tests/JobBoard.Jobs.Tests/JobBoard.Jobs.Tests.csproj" />
     <Project Path="tests/JobBoard.Applications.Tests/JobBoard.Applications.Tests.csproj" />
     <Project Path="tests/JobBoard.Identity.Tests/JobBoard.Identity.Tests.csproj" />
+    <Project Path="tests/JobBoard.Profiles.Tests/JobBoard.Profiles.Tests.csproj" />
   </Folder>
 </Solution>
