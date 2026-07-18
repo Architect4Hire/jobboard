@@ -27,13 +27,20 @@ public sealed class JobDataLayer : IJobDataLayer
     public Task<Job?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         _repository.GetAsync(id, cancellationToken);
 
-    // Add reconciles classifications and inserts the job — several writes, so it's one transaction.
-    // No event on post, so nothing is enqueued.
-    public async Task<Job> AddAsync(Job job, CancellationToken cancellationToken = default)
+    // Add reconciles classifications and inserts the job, then enqueues JobPosted — the writes and the
+    // outbox row are one transaction, so the event ships iff the job commits.
+    public async Task<Job> AddAsync(Job job, JobPosted @event, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _repository.ExecuteInTransactionAsync(token => _repository.AddAsync(job, token), cancellationToken);
+            return await _repository.ExecuteInTransactionAsync(
+                async token =>
+                {
+                    var saved = await _repository.AddAsync(job, token);
+                    await _outbox.EnqueueAsync(@event, token);
+                    return saved;
+                },
+                cancellationToken);
         }
         catch (DbUpdateException ex) when (JobRepository.IsDuplicateSlugViolation(ex))
         {

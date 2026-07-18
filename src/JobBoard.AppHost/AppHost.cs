@@ -8,6 +8,7 @@ var jobsDb = postgres.AddDatabase("jobsdb");
 var applicationsDb = postgres.AddDatabase("applicationsdb");
 var identityDb = postgres.AddDatabase("identitydb");
 var profilesDb = postgres.AddDatabase("profilesdb");
+var notificationsDb = postgres.AddDatabase("notificationsdb");
 
 // Shared HMAC signing key for the JWTs Identity issues and the gateway validates. Kept out of source:
 // supplied via AppHost config/user-secrets (Jwt:SigningKey) when present, otherwise a per-run generated
@@ -38,6 +39,10 @@ serviceBus.AddServiceBusTopic("ApplicationSubmitted")
 serviceBus.AddServiceBusTopic("ApplicationStatusChanged")
     .AddServiceBusSubscription("notifications-status-changed");
 
+// Jobs publishes JobPosted from its post-job endpoint (through its outbox); Notifications consumes it.
+serviceBus.AddServiceBusTopic("JobPosted")
+    .AddServiceBusSubscription("notifications-jobposted");
+
 // First bounded service: owns jobsdb and talks to the bus (outbox dispatcher + processor host).
 var jobs = builder.AddProject<Projects.JobBoard_Jobs>("jobs")
     .WithReference(jobsDb)
@@ -67,6 +72,15 @@ var identity = builder.AddProject<Projects.JobBoard_Identity>("identity")
 var profiles = builder.AddProject<Projects.JobBoard_Profiles>("profiles")
     .WithReference(profilesDb)
     .WaitFor(profilesDb);
+
+// Notifications: owns notificationsdb, consumes JobPosted + ApplicationSubmitted + ApplicationStatusChanged
+// and logs each. Event-only — no public HTTP surface, so the gateway does NOT reference it. Runs the
+// shared Service Bus processor host, so it uses the bus.
+builder.AddProject<Projects.JobBoard_Notifications>("notifications")
+    .WithReference(notificationsDb)
+    .WithReference(serviceBus)
+    .WaitFor(notificationsDb)
+    .WaitFor(serviceBus);
 
 // The gateway is the only public entry point. It references each proxied service so YARP can resolve the
 // "http://<service>" destinations through service discovery, and the bus (a placeholder until services

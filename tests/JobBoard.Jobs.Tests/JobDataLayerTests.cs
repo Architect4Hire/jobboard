@@ -48,16 +48,20 @@ public sealed class JobDataLayerTests
     }
 
     [Fact]
-    public async Task AddAsync_RunsInTransaction_AndEnqueuesNothing()
+    public async Task AddAsync_RunsInTransaction_AndEnqueuesJobPosted()
     {
         var repository = new FakeJobRepository();
         var outbox = new FakeOutbox();
         var dataLayer = new JobDataLayer(repository, outbox);
 
-        await dataLayer.AddAsync(TestData.Job());
+        var job = TestData.Job();
+        var posted = job.ToJobPosted();
 
+        await dataLayer.AddAsync(job, posted);
+
+        // Insert then enqueue, both inside the transaction; the JobPosted event ships iff the row commits.
         Assert.Equal(["tx:begin", "add", "tx:commit"], repository.Calls);
-        Assert.Empty(outbox.Enqueued);
+        Assert.Same(posted, Assert.Single(outbox.Enqueued));
     }
 
     [Fact]
@@ -69,7 +73,8 @@ public sealed class JobDataLayerTests
         var repository = new FakeJobRepository { AddError = slugViolation };
         var dataLayer = new JobDataLayer(repository, new FakeOutbox());
 
-        var ex = await Assert.ThrowsAsync<DomainException>(() => dataLayer.AddAsync(TestData.Job()));
+        var job = TestData.Job();
+        var ex = await Assert.ThrowsAsync<DomainException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
 
         Assert.Equal("job.classification_conflict", ex.Code);
         Assert.Equal(StatusCodes.Status409Conflict, ex.StatusCode);
@@ -83,10 +88,32 @@ public sealed class JobDataLayerTests
         var dataLayer = new JobDataLayer(repository, new FakeOutbox());
 
         // Not a slug conflict — it must surface as-is (→ the global handler's 500), not a 409.
-        await Assert.ThrowsAsync<DbUpdateException>(() => dataLayer.AddAsync(TestData.Job()));
+        var job = TestData.Job();
+        await Assert.ThrowsAsync<DbUpdateException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
     }
 
     // ---- Atomicity (real SQLite): the status change and the outbox row are one unit ----
+
+    [Fact]
+    public async Task AddAsync_LeavesNoJobAndNoOutboxRow_WhenEnqueueThrows()
+    {
+        using var harness = new JobsSqliteHarness();
+        var job = TestData.Job();
+
+        await using (var context = harness.CreateContext())
+        {
+            var repository = new JobRepository(context);
+
+            // The insert stages inside the transaction, then the JobPosted outbox write throws — the
+            // job (and its classifications) must roll back with it, leaving nothing committed.
+            var dataLayer = new JobDataLayer(repository, new FakeOutbox { ThrowOnEnqueue = true });
+            await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
+        }
+
+        await using var assert = harness.CreateContext();
+        Assert.Empty(await assert.Jobs.ToListAsync());
+        Assert.Empty(await assert.OutboxMessages.ToListAsync());
+    }
 
     [Fact]
     public async Task CloseAsync_CommitsStatusChangeAndOutboxRow_Together()

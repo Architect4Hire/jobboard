@@ -16,7 +16,12 @@ public interface IJobDataLayer
 
     Task<Job?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<Job> AddAsync(Job job, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Persists a new job and publishes <paramref name="event"/> atomically: the reconcile + insert and
+    /// the <c>JobPosted</c> outbox row commit together, or neither does. The event ships iff the job row
+    /// commits.
+    /// </summary>
+    Task<Job> AddAsync(Job job, JobPosted @event, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Persists a close atomically: the conditional status UPDATE and the <paramref name="event"/> outbox

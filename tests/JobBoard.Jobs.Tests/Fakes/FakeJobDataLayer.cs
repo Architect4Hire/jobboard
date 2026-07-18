@@ -18,6 +18,8 @@ public sealed class FakeJobDataLayer : IJobDataLayer
 
     public Job? AddedJob { get; private set; }
 
+    public JobPosted? PostedEvent { get; private set; }
+
     public Guid? ClosedId { get; private set; }
 
     public JobClosed? ClosedEvent { get; private set; }
@@ -31,9 +33,10 @@ public sealed class FakeJobDataLayer : IJobDataLayer
     public Task<Job?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(GetResult);
 
-    public Task<Job> AddAsync(Job job, CancellationToken cancellationToken = default)
+    public Task<Job> AddAsync(Job job, JobPosted @event, CancellationToken cancellationToken = default)
     {
         AddedJob = job;
+        PostedEvent = @event;
         return Task.FromResult(job);
     }
 

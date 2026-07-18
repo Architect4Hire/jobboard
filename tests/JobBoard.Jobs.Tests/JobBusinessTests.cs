@@ -35,6 +35,15 @@ public sealed class JobBusinessTests
 
         Assert.Equal(added.Id, result.Id);
         Assert.Equal(JobStatus.Open, result.Status);
+
+        // A post builds the JobPosted fact (fresh id, denormalized title/location) for the data layer to enqueue.
+        var posted = dataLayer.PostedEvent;
+        Assert.NotNull(posted);
+        Assert.NotEqual(Guid.Empty, posted!.Id);
+        Assert.Equal(added.Id, posted.JobId);
+        Assert.Equal(employerId, posted.EmployerId);
+        Assert.Equal("Platform Engineer", posted.Title);
+        Assert.Equal(added.Location, posted.Location);
     }
 
     [Fact]

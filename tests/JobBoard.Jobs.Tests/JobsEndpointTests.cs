@@ -93,12 +93,12 @@ public sealed class JobsEndpointTests
         var closed = await close.Content.ReadFromJsonAsync<JobDetailServiceModel>();
         Assert.Equal(JobStatus.Closed, closed!.Status);
 
-        // The event was enqueued to the outbox in the same transaction as the status change.
+        // The JobClosed event was enqueued to the outbox in the same transaction as the status change.
+        // (The earlier post also wrote a JobPosted row, so filter to the close event.)
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
-            var row = await db.OutboxMessages.SingleAsync();
-            Assert.Equal("JobClosed", row.Type);
+            var row = await db.OutboxMessages.SingleAsync(r => r.Type == "JobClosed");
             Assert.Equal("JobClosed", row.Destination);
             Assert.Null(row.ProcessedOnUtc);   // the dispatcher (not running in tests) would stamp this
         }
@@ -110,7 +110,25 @@ public sealed class JobsEndpointTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
-            Assert.Equal(1, await db.OutboxMessages.CountAsync());
+            Assert.Equal(1, await db.OutboxMessages.CountAsync(r => r.Type == "JobClosed"));
         }
+    }
+
+    [Fact]
+    public async Task Post_WritesJobPostedOutboxRow()
+    {
+        using var factory = new JobsApiFactory();
+        var client = factory.CreateClient();
+
+        await (await client.PostAsJsonAsync("/jobs", TestData.PostViewModel(title: "Bus Engineer")))
+            .Content.ReadFromJsonAsync<JobDetailServiceModel>();
+
+        // Posting a job publishes JobPosted through the outbox, in the same transaction as the insert.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
+        var row = await db.OutboxMessages.SingleAsync();
+        Assert.Equal("JobPosted", row.Type);
+        Assert.Equal("JobPosted", row.Destination);
+        Assert.Null(row.ProcessedOnUtc);
     }
 }

@@ -27,7 +27,10 @@ public sealed class JobBusiness : IJobBusiness
     public async Task<JobDetailServiceModel> PostAsync(PostJobViewModel viewModel, CancellationToken cancellationToken = default)
     {
         var job = viewModel.ToEntity();
-        var saved = await _dataLayer.AddAsync(job, cancellationToken);
+        // A post is a fact other services care about (Notifications logs it): build JobPosted and hand it
+        // to the data layer, which enqueues it in the same transaction as the insert.
+        var posted = job.ToJobPosted();
+        var saved = await _dataLayer.AddAsync(job, posted, cancellationToken);
         return saved.ToDetailServiceModel();
     }
 

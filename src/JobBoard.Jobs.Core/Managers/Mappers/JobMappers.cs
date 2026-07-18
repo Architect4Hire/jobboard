@@ -55,6 +55,14 @@ public static class JobMappers
         job.CreatedOnUtc);
 
     /// <summary>
+    /// Builds the <see cref="JobPosted"/> fact for a job that has just been created, stamping a fresh
+    /// event id (its outbox-row key and Service Bus <c>MessageId</c>). Carries the denormalized title and
+    /// location a consumer needs, and reuses the job's creation time as the posted time.
+    /// </summary>
+    public static JobPosted ToJobPosted(this Job job) =>
+        new(Guid.NewGuid(), job.Id, job.EmployerId, job.Title, job.Location, job.CreatedOnUtc);
+
+    /// <summary>
     /// Builds the <see cref="JobClosed"/> fact for a job that has just been closed, stamping a fresh
     /// event id (its outbox-row key and Service Bus <c>MessageId</c>) and the close timestamp.
     /// </summary>
