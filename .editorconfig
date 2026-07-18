@@ -41,6 +41,13 @@ dotnet_naming_symbols.interfaces.applicable_kinds = interface
 dotnet_naming_style.i_pascal.capitalization = pascal_case
 dotnet_naming_style.i_pascal.required_prefix = I
 
+# EF Core-generated migrations: don't hold generated code to our hand-written style rules
+# (EF emits block-scoped namespaces). Applies to Migrations/ in every service's .Core project.
+[**/Migrations/*.cs]
+generated_code = true
+csharp_style_namespace_declarations = file_scoped:silent
+dotnet_diagnostic.IDE0161.severity = none
+
 [*.{ts,js,html,scss,css,json,jsonc}]
 indent_size = 2
 

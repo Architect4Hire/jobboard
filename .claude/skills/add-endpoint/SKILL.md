@@ -119,8 +119,12 @@ Consumer    ↗   (validate the VM +     (translate VM→domain,          (compo
   operation, including the `IOutbox` write, as a callback and runs it in a transaction, so the domain
   rows and the outbox row commit together or not at all). Detail reads and writes return the **Domain
   entity**; a **list** read projects straight to its summary **ServiceModel** in SQL. Each method is
-  one self-contained data operation. No rules, cache, or validation; may translate a DB constraint
-  violation into the domain exception.
+  one self-contained data operation. No rules, cache, or validation. It **classifies** a DB constraint
+  violation (e.g. a `static bool IsDuplicate<X>Violation(DbUpdateException)` that inspects the provider
+  exception), but note it can't *catch* one: a staging method (`AddAsync`) only queues the write; the
+  violation is thrown later by `SaveChanges` **inside `ExecuteInTransactionAsync`**, so the **data
+  layer** (the transaction owner) is where the `catch` lives — it calls the repository's classifier and
+  maps the hit to a `DomainException`. See the get-or-create concurrency note in step 6.
 
 Each layer depends on the **interface** of the one below it (`IJobFacade` → `IJobBusiness` →
 `IJobDataLayer` → `IJobRepository`), never on a concrete class or a lower layer's dependencies.
@@ -194,6 +198,20 @@ the same `DbContext` and enlists in the same transaction as the domain write.
    the event is for). When a single repository call with no event already is the whole operation, this
    method is a one-line pass-through — expected, and still the seam business depends on. Depends on
    `I<Feature>Repository` and `IOutbox`; no `DbContext` of its own.
+
+   **Concurrency — guard writes, don't trust the read.** Two requests can pass the same read-side check
+   before either commits, so a rule enforced only against a loaded entity is not enforced. Two shapes
+   recur; both belong in the data-layer operation (the transaction), never the read:
+   - **State transition** (close a job, advance an application): make the change a **conditional
+     write** — `UPDATE ... SET Status = @next WHERE Id = @id AND Status = @expected` (EF
+     `ExecuteUpdateAsync`) — and treat **0 rows affected** as "someone got here first" → the conflict,
+     and **emit no event**. The loaded entity's status check is only a fast path; the conditional
+     write is the authoritative guard, and it lets the read go `AsNoTracking`.
+   - **Get-or-create** (resolve categories/tags by slug, create if missing): the `SELECT`-then-`INSERT`
+     has a race window where two posts insert the same brand-new key and the second trips the unique
+     index. `catch (DbUpdateException e) when (Repo.IsDuplicate<X>Violation(e))` in this method and
+     throw a **retryable 409** `DomainException` (the classifier is the repository's — step 5); a
+     client retry then finds and reuses the now-committed row.
 
 7. **Integration event** (only if the change is something other services care about) →
    `src/JobBoard.Contracts/`. Add an immutable event **record** with an `Id` (Guid) and a past-tense
@@ -360,6 +378,9 @@ the part that drifts.
       `DbContext`, or Service Bus
 - [ ] Any operation that writes-and-emits, or writes more than once, is wrapped in a transaction and
       commits the domain row(s) + outbox row together or not at all
+- [ ] Concurrency is guarded in the write, not the read: a state transition uses a conditional
+      `UPDATE ... WHERE Status = @expected` (0 rows → conflict, no event); a get-or-create catches the
+      unique-constraint violation and maps it to a retryable 409 — neither relies on the loaded entity
 - [ ] Repository does queries only against `<Service>DbContext`, one self-contained op per method; no
       outbox knowledge
 - [ ] Each layer depends on the interface below it (`IFacade`→`IBusiness`→`IDataLayer`→`IRepository`),
