@@ -1,17 +1,34 @@
+using JobBoard.Contracts;
 using JobBoard.Profiles.Core.Managers.Models.Domain;
 using JobBoard.Profiles.Core.Managers.Models.ServiceModels;
 using JobBoard.Profiles.Core.Managers.Models.ViewModels;
+using JobBoard.Shared.Requests;
 
 namespace JobBoard.Profiles.Core.Managers.Mappers;
 
 /// <summary>
-/// The two mapping seams the candidate business layer owns: <b>ViewModel → Domain</b> (upsert, taking
-/// the owner id from the route) and <b>Domain → ServiceModel</b> (every response). No integration-event
-/// mapping — Profiles publishes no events. <see cref="ToEntity"/> deliberately leaves the résumé pointers
-/// unset: they're owned by the upload/delete flow, and the business layer carries them across an upsert.
+/// The mapping seams the candidate business layer owns: <b>ViewModel → Domain</b> (upsert, taking the owner
+/// id from the route), <b>Domain → ServiceModel</b> (every response), and <b>Domain → integration event</b>
+/// (the <see cref="ProfileUpdated"/> audit fact). <see cref="ToEntity"/> deliberately leaves the résumé
+/// pointers unset: they're owned by the upload/delete flow, and the business layer carries them across an
+/// upsert. The event carries ids + type + timestamp only — never the profile's field values.
 /// </summary>
 public static class CandidateProfileMappers
 {
+    /// <summary>
+    /// Builds the <see cref="ProfileUpdated"/> fact for a candidate profile that has just been written
+    /// (edited or its résumé changed), stamping a fresh event id and the audit <paramref name="thread"/>
+    /// (ADR-0013). The subject is the profile id (== the owning candidate's account id) and the occurred-at
+    /// is the row's update time; no résumé PII is included.
+    /// </summary>
+    public static ProfileUpdated ToProfileUpdated(this CandidateProfile profile, AuditThread thread) =>
+        new(Guid.NewGuid(), profile.Id, "Candidate", profile.UpdatedOnUtc)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
+
     /// <summary>
     /// Translates the upsert request into a <see cref="CandidateProfile"/> keyed by the owning
     /// <paramref name="candidateId"/>, stamping the update time. The data layer decides insert vs update;

@@ -5,6 +5,7 @@ using JobBoard.Profiles.Core.Managers.Models.ServiceModels;
 using JobBoard.Profiles.Core.Managers.Models.ViewModels;
 using JobBoard.Profiles.Core.Storage;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Requests;
 using Microsoft.AspNetCore.Http;
 
 namespace JobBoard.Profiles.Core.Business;
@@ -14,11 +15,16 @@ public sealed class CandidateProfileBusiness : ICandidateProfileBusiness
 {
     private readonly ICandidateProfileDataLayer _dataLayer;
     private readonly IResumeStorage _resumeStorage;
+    private readonly IRequestContext _requestContext;
 
-    public CandidateProfileBusiness(ICandidateProfileDataLayer dataLayer, IResumeStorage resumeStorage)
+    public CandidateProfileBusiness(
+        ICandidateProfileDataLayer dataLayer,
+        IResumeStorage resumeStorage,
+        IRequestContext requestContext)
     {
         _dataLayer = dataLayer;
         _resumeStorage = resumeStorage;
+        _requestContext = requestContext;
     }
 
     public async Task<CandidateProfileServiceModel?> GetAsync(Guid candidateId, CancellationToken cancellationToken = default)
@@ -41,7 +47,10 @@ public sealed class CandidateProfileBusiness : ICandidateProfileBusiness
             incoming.ResumeContentType = existing.ResumeContentType;
         }
 
-        var saved = await _dataLayer.UpsertAsync(incoming, cancellationToken);
+        // ProfileUpdated is stamped with the request thread — a candidate edits their own profile, so the
+        // actor is the authenticated caller the gateway projected (ADR-0013). No profile field values ride along.
+        var updated = incoming.ToProfileUpdated(_requestContext.RootThread());
+        var saved = await _dataLayer.UpsertAsync(incoming, updated, cancellationToken);
         return saved.ToServiceModel();
     }
 
@@ -62,7 +71,9 @@ public sealed class CandidateProfileBusiness : ICandidateProfileBusiness
         profile.ResumeContentType = contentType;
         profile.UpdatedOnUtc = DateTime.UtcNow;
 
-        var saved = await _dataLayer.UpsertAsync(profile, cancellationToken);
+        // A résumé upload is a profile change too — audit it like any other write.
+        var updated = profile.ToProfileUpdated(_requestContext.RootThread());
+        var saved = await _dataLayer.UpsertAsync(profile, updated, cancellationToken);
 
         // The profile now points at the new blob; best-effort cleanup of the one it replaced.
         if (previousObjectName is not null && previousObjectName != objectName)
@@ -106,7 +117,9 @@ public sealed class CandidateProfileBusiness : ICandidateProfileBusiness
         profile.ResumeContentType = null;
         profile.UpdatedOnUtc = DateTime.UtcNow;
 
-        var saved = await _dataLayer.UpsertAsync(profile, cancellationToken);
+        // Clearing the résumé is a profile change too — audit it.
+        var updated = profile.ToProfileUpdated(_requestContext.RootThread());
+        var saved = await _dataLayer.UpsertAsync(profile, updated, cancellationToken);
 
         // Drop the blob after the pointer is cleared (a leftover blob is harmless; a dangling pointer isn't).
         if (objectName is not null)

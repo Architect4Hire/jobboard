@@ -10,6 +10,8 @@
     <!-- Azure Blob Storage client integration: registers a BlobServiceClient keyed to the "blobs"
          resource (résumé storage), injected by the AppHost — never a raw connection string. -->
     <PackageReference Include="Aspire.Azure.Storage.Blobs" />
+    <!-- Send side of the audit outbox (ProfileUpdated), keyed to the "servicebus" resource. -->
+    <PackageReference Include="Aspire.Azure.Messaging.ServiceBus" />
     <!-- Design-time only: EF Core tooling (migrations) resolves the DbContext through this host. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>

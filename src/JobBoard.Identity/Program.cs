@@ -10,10 +10,18 @@ builder.AddServiceDefaults();
 // (connection injected by the AppHost — never a raw connection string).
 builder.AddNpgsqlDbContext<IdentityDbContext>("identitydb");
 
+// ServiceBusClient via the Aspire integration, keyed to the "servicebus" resource, so the outbox
+// dispatcher (send side) has a client to resolve.
+builder.AddAzureServiceBusClient("servicebus");
+
 // Composition: the .Core stack (facade → business → data → repository + password/token seams +
-// validators). Identity publishes and consumes no integration events, so there is no Service Bus client
-// and no shared messaging spine — only the shared exception handler for the standard error shape.
+// validators) + the shared persistence/messaging spine. Identity now publishes audit facts (account
+// created, login) through its outbox (SCRUB A7): AddSharedPersistence wires IOutbox onto the request
+// scope and AddSharedMessaging runs the OutboxDispatcher that relays them. It consumes no events, so the
+// processor host AddSharedMessaging also starts opens no subscriptions (it idles).
 builder.Services.AddIdentityCore(builder.Configuration);
+builder.Services.AddSharedPersistence<IdentityDbContext>();
+builder.Services.AddSharedMessaging<IdentityDbContext>();
 builder.Services.AddSharedExceptionHandler();
 
 // Ambient request context: reads the correlation thread the gateway projected (ADR-0015) so the audit

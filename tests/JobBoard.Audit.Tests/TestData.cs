@@ -66,4 +66,74 @@ internal static class TestData
             CausationId = causationId ?? Guid.NewGuid(),
             ActorId = actorId,
         };
+
+    public static AccountCreated AccountCreated(
+        Guid? id = null,
+        Guid? accountId = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
+        Guid? actorId = null,
+        string email = "user@example.com",
+        string role = "Candidate",
+        DateTime? occurredOnUtc = null)
+    {
+        var account = accountId ?? Guid.NewGuid();
+        return new(id ?? Guid.NewGuid(), account, email, role, occurredOnUtc ?? DateTime.UtcNow)
+        {
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            CausationId = causationId ?? Guid.NewGuid(),
+            // Registration self-attributes: the actor is the account itself unless a test overrides it.
+            ActorId = actorId ?? account,
+        };
+    }
+
+    public static LoggedIn LoggedIn(
+        Guid? id = null,
+        Guid? accountId = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
+        Guid? actorId = null,
+        string email = "user@example.com",
+        string role = "Candidate",
+        DateTime? occurredOnUtc = null)
+    {
+        var account = accountId ?? Guid.NewGuid();
+        return new(id ?? Guid.NewGuid(), account, email, role, occurredOnUtc ?? DateTime.UtcNow)
+        {
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            CausationId = causationId ?? Guid.NewGuid(),
+            // Login self-attributes, same as registration.
+            ActorId = actorId ?? account,
+        };
+    }
+
+    public static LoginFailed LoginFailed(
+        Guid? id = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
+        string email = "user@example.com",
+        string reason = "invalid_credentials",
+        DateTime? occurredOnUtc = null) =>
+        new(id ?? Guid.NewGuid(), email, reason, occurredOnUtc ?? DateTime.UtcNow)
+        {
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            CausationId = causationId ?? Guid.NewGuid(),
+            // No authenticated actor for a rejected login.
+            ActorId = null,
+        };
+
+    public static ProfileUpdated ProfileUpdated(
+        Guid? id = null,
+        Guid? profileId = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
+        Guid? actorId = null,
+        string profileType = "Candidate",
+        DateTime? occurredOnUtc = null) =>
+        new(id ?? Guid.NewGuid(), profileId ?? Guid.NewGuid(), profileType, occurredOnUtc ?? DateTime.UtcNow)
+        {
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            CausationId = causationId ?? Guid.NewGuid(),
+            ActorId = actorId ?? Guid.NewGuid(),
+        };
 }

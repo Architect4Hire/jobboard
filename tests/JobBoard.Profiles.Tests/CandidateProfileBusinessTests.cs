@@ -2,14 +2,41 @@ using System.Text;
 using JobBoard.Profiles.Core.Business;
 using JobBoard.Profiles.Tests.Fakes;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Requests;
 using Xunit;
 
 namespace JobBoard.Profiles.Tests;
 
 public sealed class CandidateProfileBusinessTests
 {
+    // The request thread the gateway projected; the business stamps it onto every ProfileUpdated it builds.
+    private static readonly Guid CorrelationId = Guid.NewGuid();
+    private static readonly Guid ActorId = Guid.NewGuid();
+    private static readonly IRequestContext RequestContext = BuildContext();
+
+    private static AmbientRequestContext BuildContext()
+    {
+        var context = new AmbientRequestContext();
+        context.Populate(CorrelationId, ActorId, "candidate");
+        return context;
+    }
+
     private static CandidateProfileBusiness Create(FakeCandidateProfileDataLayer dataLayer, InMemoryResumeStorage? storage = null) =>
-        new(dataLayer, storage ?? new InMemoryResumeStorage());
+        new(dataLayer, storage ?? new InMemoryResumeStorage(), RequestContext);
+
+    // Asserts the ProfileUpdated built at a candidate write site: fresh id, the profile as subject, the
+    // "Candidate" discriminator, and the request thread (actor is the authenticated caller — RootThread).
+    private static void AssertCandidateEvent(FakeCandidateProfileDataLayer dataLayer, Guid candidateId)
+    {
+        var updated = dataLayer.UpdatedEvent;
+        Assert.NotNull(updated);
+        Assert.NotEqual(Guid.Empty, updated!.Id);
+        Assert.Equal(candidateId, updated.ProfileId);
+        Assert.Equal("Candidate", updated.ProfileType);
+        Assert.Equal(CorrelationId, updated.CorrelationId);
+        Assert.Equal(CorrelationId, updated.CausationId);
+        Assert.Equal(ActorId, updated.ActorId);
+    }
 
     [Fact]
     public async Task UpsertAsync_TranslatesViewModel_WithRouteOwnerId_AndMapsResult()
@@ -34,6 +61,9 @@ public sealed class CandidateProfileBusinessTests
         Assert.Equal(candidateId, result.CandidateId);
         Assert.Equal("Staff Engineer", result.Headline);
         Assert.Equal(["c#", "azure"], result.Skills);
+
+        // The upsert emits ProfileUpdated (ids + type + timestamp only — no résumé PII).
+        AssertCandidateEvent(dataLayer, candidateId);
     }
 
     [Fact]
@@ -99,6 +129,9 @@ public sealed class CandidateProfileBusinessTests
         Assert.Equal("resume.pdf", dataLayer.Upserted.ResumeFileName);
         Assert.Equal("application/pdf", dataLayer.Upserted.ResumeContentType);
         Assert.Equal($"/profiles/candidates/{candidateId}/resume", result.ResumeUrl);
+
+        // A résumé upload is a profile change — it too emits ProfileUpdated.
+        AssertCandidateEvent(dataLayer, candidateId);
     }
 
     [Fact]
@@ -141,6 +174,9 @@ public sealed class CandidateProfileBusinessTests
         Assert.Null(dataLayer.Upserted!.ResumeObjectName);
         Assert.Null(result!.ResumeUrl);
         Assert.Contains("blob-x", storage.Deleted);
+
+        // Clearing the résumé is a profile change — it too emits ProfileUpdated.
+        AssertCandidateEvent(dataLayer, candidateId);
     }
 
     [Fact]

@@ -49,6 +49,12 @@ public static class AuditEntryMapper
         JobClosed e => (e.JobId, e.ClosedOnUtc),
         ApplicationSubmitted e => (e.ApplicationId, e.SubmittedOnUtc),
         ApplicationStatusChanged e => (e.ApplicationId, e.ChangedOnUtc),
+        AccountCreated e => (e.AccountId, e.OccurredOnUtc),
+        LoggedIn e => (e.AccountId, e.OccurredOnUtc),
+        // A failed login has no account id (an unknown email has no account, and we don't disclose which):
+        // no subject, just the attempt in the trail.
+        LoginFailed e => ((Guid?)null, e.OccurredOnUtc),
+        ProfileUpdated e => (e.ProfileId, e.OccurredOnUtc),
         _ => throw new NotSupportedException(
             $"No audit projection for event '{@event.GetType().Name}'. Add its subject id and occurred-at " +
             "to AuditEntryMapper.Describe when auditing a new event (SCRUB A7)."),

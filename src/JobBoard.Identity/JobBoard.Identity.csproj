@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Send side of the audit outbox (AccountCreated / LoggedIn / LoginFailed), keyed to "servicebus". -->
+    <PackageReference Include="Aspire.Azure.Messaging.ServiceBus" />
     <!-- Design-time only: EF Core tooling (migrations) resolves the DbContext through this host. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>

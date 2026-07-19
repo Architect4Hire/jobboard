@@ -1,5 +1,7 @@
+using JobBoard.Contracts;
 using JobBoard.Profiles.Core.Managers.Models.Domain;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Messaging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,20 +11,31 @@ namespace JobBoard.Profiles.Core.Data;
 public sealed class CandidateProfileDataLayer : ICandidateProfileDataLayer
 {
     private readonly ICandidateProfileRepository _repository;
+    private readonly IOutbox _outbox;
 
-    public CandidateProfileDataLayer(ICandidateProfileRepository repository) => _repository = repository;
+    public CandidateProfileDataLayer(ICandidateProfileRepository repository, IOutbox outbox)
+    {
+        _repository = repository;
+        _outbox = outbox;
+    }
 
     // A single self-contained read — straight pass-through, no transaction needed.
     public Task<CandidateProfile?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         _repository.GetAsync(id, cancellationToken);
 
-    public async Task<CandidateProfile> UpsertAsync(CandidateProfile incoming, CancellationToken cancellationToken = default)
+    public async Task<CandidateProfile> UpsertAsync(CandidateProfile incoming, ProfileUpdated updated, CancellationToken cancellationToken = default)
     {
         try
         {
-            // The repository stages the insert-or-update; the transaction is what SaveChanges/commits it.
+            // The repository stages the insert-or-update and the ProfileUpdated outbox row commits in the
+            // same transaction, so the event ships iff the write commits.
             return await _repository.ExecuteInTransactionAsync(
-                token => _repository.UpsertAsync(incoming, token),
+                async token =>
+                {
+                    var saved = await _repository.UpsertAsync(incoming, token);
+                    await _outbox.EnqueueAsync(updated, token);
+                    return saved;
+                },
                 cancellationToken);
         }
         catch (DbUpdateException ex) when (CandidateProfileRepository.IsDuplicateKeyViolation(ex))

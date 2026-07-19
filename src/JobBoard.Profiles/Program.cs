@@ -14,11 +14,19 @@ builder.AddNpgsqlDbContext<ProfilesDbContext>("profilesdb");
 // connection is injected by Aspire; IResumeStorage in .Core types against this client.
 builder.AddAzureBlobServiceClient("blobs");
 
+// ServiceBusClient via the Aspire integration, keyed to the "servicebus" resource, so the outbox
+// dispatcher (send side) has a client to resolve.
+builder.AddAzureServiceBusClient("servicebus");
+
 // Composition: the .Core stacks (candidate + employer, each facade → business → data → repository +
-// validators). Profiles publishes and consumes no integration events, so there is no Service Bus client
-// and no shared messaging spine; it validates no tokens (the gateway does) — only the shared exception
-// handler for the standard error shape.
+// validators) + the shared persistence/messaging spine. Profiles now publishes ProfileUpdated audit facts
+// through its outbox (SCRUB A7): AddSharedPersistence wires IOutbox onto the request scope and
+// AddSharedMessaging runs the OutboxDispatcher that relays them. It consumes no events, so the processor
+// host AddSharedMessaging also starts opens no subscriptions (it idles). It validates no tokens (the
+// gateway does) — only the shared exception handler for the standard error shape.
 builder.Services.AddProfilesCore();
+builder.Services.AddSharedPersistence<ProfilesDbContext>();
+builder.Services.AddSharedMessaging<ProfilesDbContext>();
 builder.Services.AddSharedExceptionHandler();
 
 // Ambient request context: reads the correlation/actor thread the gateway projected (ADR-0015) so the

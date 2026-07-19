@@ -1,6 +1,7 @@
 using JobBoard.Profiles.Core.Data;
 using JobBoard.Profiles.Core.Storage;
 using JobBoard.Profiles.Tests.Fakes;
+using JobBoard.Shared.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -10,14 +11,16 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace JobBoard.Profiles.Tests;
 
 /// <summary>
-/// Hosts the real Profiles pipeline (controllers → facade → business → data → repository) for endpoint
-/// tests, with the Aspire Npgsql context swapped for SQLite over one always-open in-memory connection and
-/// the blob-backed résumé storage swapped for an in-memory fake (so uploads never need Azurite). Runs
-/// outside Development, so the host's migrate-on-startup never fires.
+/// Hosts the real Profiles pipeline (controllers → facade → business → data → repository + the shared
+/// outbox) for endpoint tests, with three swaps that keep it self-contained: the Aspire Npgsql context
+/// becomes SQLite over one always-open in-memory connection, the blob-backed résumé storage becomes an
+/// in-memory fake (so uploads never need Azurite), and the Service Bus background services are dropped
+/// (nothing to connect to). Runs outside Development, so the host's migrate-on-startup never fires.
 /// </summary>
 public sealed class ProfilesApiFactory : WebApplicationFactory<Program>
 {
@@ -42,10 +45,18 @@ public sealed class ProfilesApiFactory : WebApplicationFactory<Program>
         {
             ["ConnectionStrings:profilesdb"] = "Host=localhost;Database=profilesdb;Username=test;Password=test",
             ["ConnectionStrings:blobs"] = "UseDevelopmentStorage=true",
+            // Dummy Service Bus connection so AddAzureServiceBusClient binds; the relay is dropped below.
+            ["ConnectionStrings:servicebus"] =
+                "Endpoint=sb://localhost.servicebus.windows.net/;SharedAccessKeyName=k;SharedAccessKey=AAAAAAAAAAAAAAAAAAAAAA==",
         }));
 
         builder.ConfigureTestServices(services =>
         {
+            // No Service Bus in tests — drop the relay/processor so nothing tries to open a connection. The
+            // ProfileUpdated outbox row is still written by the write paths; the data-layer tests assert it.
+            RemoveHostedService<OutboxDispatcher>(services);
+            RemoveHostedService<ServiceBusProcessorHost>(services);
+
             services.RemoveAll<IDbContextOptionsConfiguration<ProfilesDbContext>>();
             services.RemoveAll<DbContextOptions<ProfilesDbContext>>();
             services.RemoveAll<ProfilesDbContext>();
@@ -60,6 +71,17 @@ public sealed class ProfilesApiFactory : WebApplicationFactory<Program>
             using var scope = provider.CreateScope();
             scope.ServiceProvider.GetRequiredService<ProfilesDbContext>().Database.EnsureCreated();
         });
+    }
+
+    private static void RemoveHostedService<T>(IServiceCollection services)
+    {
+        var descriptor = services.SingleOrDefault(
+            d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(T));
+
+        if (descriptor is not null)
+        {
+            services.Remove(descriptor);
+        }
     }
 
     protected override void Dispose(bool disposing)

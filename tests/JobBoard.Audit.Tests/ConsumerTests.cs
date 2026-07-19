@@ -52,4 +52,48 @@ public sealed class ConsumerTests
 
         Assert.Same(@event, facade.Recorded);
     }
+
+    [Fact]
+    public async Task AuditConsumer_AccountCreated_DelegatesToFacade()
+    {
+        var facade = new FakeAuditFacade();
+        var @event = TestData.AccountCreated();
+
+        await new AuditConsumer<AccountCreated>(facade).ConsumeAsync(@event);
+
+        Assert.Same(@event, facade.Recorded);
+    }
+
+    [Fact]
+    public async Task AuditConsumer_LoggedIn_DelegatesToFacade()
+    {
+        var facade = new FakeAuditFacade();
+        var @event = TestData.LoggedIn();
+
+        await new AuditConsumer<LoggedIn>(facade).ConsumeAsync(@event);
+
+        Assert.Same(@event, facade.Recorded);
+    }
+
+    [Fact]
+    public async Task AuditConsumer_LoginFailed_DelegatesToFacade()
+    {
+        var facade = new FakeAuditFacade();
+        var @event = TestData.LoginFailed();
+
+        await new AuditConsumer<LoginFailed>(facade).ConsumeAsync(@event);
+
+        Assert.Same(@event, facade.Recorded);
+    }
+
+    [Fact]
+    public async Task AuditConsumer_ProfileUpdated_DelegatesToFacade()
+    {
+        var facade = new FakeAuditFacade();
+        var @event = TestData.ProfileUpdated();
+
+        await new AuditConsumer<ProfileUpdated>(facade).ConsumeAsync(@event);
+
+        Assert.Same(@event, facade.Recorded);
+    }
 }

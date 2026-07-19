@@ -62,6 +62,22 @@ var jobPostedTopic = serviceBus.AddServiceBusTopic("JobPosted");
 jobPostedTopic.AddServiceBusSubscription("notifications-jobposted");
 jobPostedTopic.AddServiceBusSubscription("audit-jobposted");
 
+// Cradle-to-grave audit events (SCRUB A7): actions that mutate state but published nothing before now.
+// Identity publishes AccountCreated (registration) and LoggedIn/LoginFailed (authentication); Profiles
+// publishes ProfileUpdated (résumé/company-profile edits). Each is audit-only — the JobBoard.Audit
+// service is the sole subscriber, so every topic carries just its "audit-*" subscription.
+var accountCreatedTopic = serviceBus.AddServiceBusTopic("AccountCreated");
+accountCreatedTopic.AddServiceBusSubscription("audit-accountcreated");
+
+var loggedInTopic = serviceBus.AddServiceBusTopic("LoggedIn");
+loggedInTopic.AddServiceBusSubscription("audit-loggedin");
+
+var loginFailedTopic = serviceBus.AddServiceBusTopic("LoginFailed");
+loginFailedTopic.AddServiceBusSubscription("audit-loginfailed");
+
+var profileUpdatedTopic = serviceBus.AddServiceBusTopic("ProfileUpdated");
+profileUpdatedTopic.AddServiceBusSubscription("audit-profileupdated");
+
 // First bounded service: owns jobsdb, talks to the bus (outbox dispatcher + processor host), and caches
 // its job list in Redis (the only service wired to the cache for now).
 var jobs = builder.AddProject<Projects.JobBoard_Jobs>("jobs")
@@ -80,23 +96,28 @@ var applications = builder.AddProject<Projects.JobBoard_Applications>("applicati
     .WaitFor(applicationsDb)
     .WaitFor(serviceBus);   // runs the outbox dispatcher + processor host, so it uses the bus
 
-// Identity: owns identitydb, issues JWTs. Synchronous request/response service — it publishes and
-// consumes no integration events, so it takes no Service Bus reference. The signing key is injected via
-// env (Jwt__SigningKey) so it stays out of source.
+// Identity: owns identitydb, issues JWTs. Now also publishes audit facts (AccountCreated, LoggedIn,
+// LoginFailed) through its outbox (SCRUB A7), so it references the bus and runs the outbox dispatcher — it
+// still consumes nothing. The signing key is injected via env (Jwt__SigningKey) so it stays out of source.
 var identity = builder.AddProject<Projects.JobBoard_Identity>("identity")
     .WithReference(identityDb)
+    .WithReference(serviceBus)
     .WaitFor(identityDb)
+    .WaitFor(serviceBus)    // runs the outbox dispatcher, so it uses the bus
     .WithEnvironment("Jwt__SigningKey", jwtSigningKey);
 
-// Profiles: owns profilesdb (candidate résumés + employer company profiles). Synchronous
-// request/response service — it publishes/consumes no events (no Service Bus) and validates no tokens
-// (the gateway does), so it takes neither a bus reference nor the signing key. References the "blobs"
-// storage resource for résumé file uploads (connection injected via WithReference, never hardcoded).
+// Profiles: owns profilesdb (candidate résumés + employer company profiles). Now also publishes
+// ProfileUpdated audit facts through its outbox (SCRUB A7), so it references the bus and runs the outbox
+// dispatcher — it still consumes nothing and validates no tokens (the gateway does), so it takes no signing
+// key. References the "blobs" storage resource for résumé file uploads (connection injected via
+// WithReference, never hardcoded).
 var profiles = builder.AddProject<Projects.JobBoard_Profiles>("profiles")
     .WithReference(profilesDb)
     .WithReference(resumeBlobs)
+    .WithReference(serviceBus)
     .WaitFor(profilesDb)
-    .WaitFor(resumeBlobs);
+    .WaitFor(resumeBlobs)
+    .WaitFor(serviceBus);   // runs the outbox dispatcher, so it uses the bus
 
 // Notifications: owns notificationsdb, consumes JobPosted + ApplicationSubmitted + ApplicationStatusChanged
 // and logs each. Event-only — no public HTTP surface, so the gateway does NOT reference it. Runs the

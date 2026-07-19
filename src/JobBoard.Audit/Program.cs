@@ -27,6 +27,11 @@ builder.Services.AddIntegrationEventConsumer<JobPosted, AuditConsumer<JobPosted>
 builder.Services.AddIntegrationEventConsumer<JobClosed, AuditConsumer<JobClosed>>("audit-jobclosed");
 builder.Services.AddIntegrationEventConsumer<ApplicationSubmitted, AuditConsumer<ApplicationSubmitted>>("audit-submitted");
 builder.Services.AddIntegrationEventConsumer<ApplicationStatusChanged, AuditConsumer<ApplicationStatusChanged>>("audit-statuschanged");
+// Cradle-to-grave events (SCRUB A7): the actions that published nothing before now.
+builder.Services.AddIntegrationEventConsumer<AccountCreated, AuditConsumer<AccountCreated>>("audit-accountcreated");
+builder.Services.AddIntegrationEventConsumer<LoggedIn, AuditConsumer<LoggedIn>>("audit-loggedin");
+builder.Services.AddIntegrationEventConsumer<LoginFailed, AuditConsumer<LoginFailed>>("audit-loginfailed");
+builder.Services.AddIntegrationEventConsumer<ProfileUpdated, AuditConsumer<ProfileUpdated>>("audit-profileupdated");
 
 // Read-only support-query surface (SCRUB A6): the AuditController and the shared exception handler that
 // shapes a bad query filter into the shared error response. Reached only via the gateway's auth-protected

@@ -81,6 +81,77 @@ public sealed class AuditEntryMapperTests
     }
 
     [Fact]
+    public void AccountCreated_SubjectIsAccount_OccurredIsCreatedOn_AndPayloadRoundTrips()
+    {
+        var accountId = Guid.NewGuid();
+        var occurredOnUtc = new DateTime(2026, 7, 19, 14, 0, 0, DateTimeKind.Utc);
+        var @event = TestData.AccountCreated(accountId: accountId, email: "new@example.com", role: "Employer",
+            occurredOnUtc: occurredOnUtc);
+
+        var entry = @event.ToAuditEntry();
+
+        Assert.Equal("AccountCreated", entry.EventType);
+        Assert.Equal(accountId, entry.SubjectId);          // the account is the subject
+        Assert.Equal(accountId, entry.ActorId);            // and its own actor (self-originated)
+        Assert.Equal(occurredOnUtc, entry.OccurredOnUtc);
+
+        // Payload is the full event (email + role captured, no secrets to leak); it round-trips.
+        var roundTripped = JsonSerializer.Deserialize<AccountCreated>(entry.Payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Equal(@event, roundTripped);
+    }
+
+    [Fact]
+    public void LoggedIn_SubjectIsAccount_AndOccurredIsSignInMoment()
+    {
+        var accountId = Guid.NewGuid();
+        var occurredOnUtc = new DateTime(2026, 7, 19, 15, 0, 0, DateTimeKind.Utc);
+        var @event = TestData.LoggedIn(accountId: accountId, occurredOnUtc: occurredOnUtc);
+
+        var entry = @event.ToAuditEntry();
+
+        Assert.Equal("LoggedIn", entry.EventType);
+        Assert.Equal(accountId, entry.SubjectId);
+        Assert.Equal(accountId, entry.ActorId);
+        Assert.Equal(occurredOnUtc, entry.OccurredOnUtc);
+    }
+
+    [Fact]
+    public void LoginFailed_HasNoSubject_NoActor_AndPayloadRoundTrips()
+    {
+        var occurredOnUtc = new DateTime(2026, 7, 19, 16, 0, 0, DateTimeKind.Utc);
+        var @event = TestData.LoginFailed(email: "nobody@example.com", occurredOnUtc: occurredOnUtc);
+
+        var entry = @event.ToAuditEntry();
+
+        Assert.Equal("LoginFailed", entry.EventType);
+        Assert.Null(entry.SubjectId);   // a rejected login attributes to no account (existence not disclosed)
+        Assert.Null(entry.ActorId);
+        Assert.Equal(occurredOnUtc, entry.OccurredOnUtc);
+
+        var roundTripped = JsonSerializer.Deserialize<LoginFailed>(entry.Payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Equal(@event, roundTripped);
+    }
+
+    [Fact]
+    public void ProfileUpdated_SubjectIsProfile_AndOccurredIsUpdatedOn()
+    {
+        var profileId = Guid.NewGuid();
+        var occurredOnUtc = new DateTime(2026, 7, 19, 17, 0, 0, DateTimeKind.Utc);
+        var @event = TestData.ProfileUpdated(profileId: profileId, profileType: "Employer", occurredOnUtc: occurredOnUtc);
+
+        var entry = @event.ToAuditEntry();
+
+        Assert.Equal("ProfileUpdated", entry.EventType);
+        Assert.Equal(profileId, entry.SubjectId);
+        Assert.Equal(occurredOnUtc, entry.OccurredOnUtc);
+
+        // Payload carries the type discriminator but no profile field values.
+        var roundTripped = JsonSerializer.Deserialize<ProfileUpdated>(entry.Payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Equal(@event, roundTripped);
+        Assert.Equal("Employer", roundTripped!.ProfileType);
+    }
+
+    [Fact]
     public void AnonymousEvent_MapsNullActor()
     {
         var @event = TestData.JobPosted(actorId: null);
