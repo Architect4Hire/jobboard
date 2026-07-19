@@ -5,6 +5,7 @@ using JobBoard.Applications.Core.Managers.Models.ServiceModels;
 using JobBoard.Applications.Core.Managers.Models.ViewModels;
 using JobBoard.Contracts;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Requests;
 using Microsoft.AspNetCore.Http;
 
 namespace JobBoard.Applications.Core.Business;
@@ -30,7 +31,16 @@ public sealed class ApplicationBusiness : IApplicationBusiness
 
     private readonly IApplicationDataLayer _dataLayer;
 
-    public ApplicationBusiness(IApplicationDataLayer dataLayer) => _dataLayer = dataLayer;
+    // Only valid on request-initiated paths (Submit/Withdraw/Advance) via RootThread(). Consumer-initiated
+    // paths (e.g. HandleJobClosedAsync) run with no HTTP request, so this is unpopulated there — inherit the
+    // thread from the consumed event with FollowOnThread() instead, or you stamp an empty thread (SCRUB A3).
+    private readonly IRequestContext _requestContext;
+
+    public ApplicationBusiness(IApplicationDataLayer dataLayer, IRequestContext requestContext)
+    {
+        _dataLayer = dataLayer;
+        _requestContext = requestContext;
+    }
 
     public Task<IReadOnlyList<ApplicationSummaryServiceModel>> ListByCandidateAsync(
         Guid candidateId,
@@ -48,7 +58,7 @@ public sealed class ApplicationBusiness : IApplicationBusiness
         CancellationToken cancellationToken = default)
     {
         var application = viewModel.ToEntity();
-        var @event = application.ToApplicationSubmitted();
+        var @event = application.ToApplicationSubmitted(_requestContext.RootThread());
 
         var saved = await _dataLayer.SubmitAsync(application, @event, cancellationToken);
         return saved.ToDetailServiceModel();
@@ -64,7 +74,7 @@ public sealed class ApplicationBusiness : IApplicationBusiness
             throw new DomainException("application.not_active", $"Application '{id}' is not active and cannot be withdrawn.");
         }
 
-        var @event = application.ToStatusChanged(application.Status, ApplicationStatus.Withdrawn);
+        var @event = application.ToStatusChanged(application.Status, ApplicationStatus.Withdrawn, _requestContext.RootThread());
 
         var withdrawn = await _dataLayer.WithdrawAsync(id, @event, cancellationToken);
         if (!withdrawn)
@@ -93,7 +103,7 @@ public sealed class ApplicationBusiness : IApplicationBusiness
                 $"An application in '{application.Status}' cannot advance to '{target}'.");
         }
 
-        var @event = application.ToStatusChanged(application.Status, target);
+        var @event = application.ToStatusChanged(application.Status, target, _requestContext.RootThread());
 
         var advanced = await _dataLayer.AdvanceAsync(id, application.Status, target, @event, cancellationToken);
         if (!advanced)
@@ -108,12 +118,17 @@ public sealed class ApplicationBusiness : IApplicationBusiness
         return application.ToDetailServiceModel();
     }
 
-    public Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default) =>
-        _dataLayer.CloseOpenApplicationsForJobAsync(
+    public Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default)
+    {
+        // Consumer-initiated: there is no HTTP request here, so the thread is inherited from the consumed
+        // event — correlation and actor carry over, and JobClosed is the direct cause of each rejection.
+        var thread = @event.FollowOnThread();
+        return _dataLayer.CloseOpenApplicationsForJobAsync(
             @event.JobId,
             @event.Id,
             ApplicationStatus.Rejected,
             // Each snapshot entity carries its pre-close status as the event's "from".
-            application => application.ToStatusChanged(application.Status, ApplicationStatus.Rejected),
+            application => application.ToStatusChanged(application.Status, ApplicationStatus.Rejected, thread),
             cancellationToken);
+    }
 }

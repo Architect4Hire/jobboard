@@ -3,6 +3,7 @@ using JobBoard.Jobs.Core.Managers.Models.Domain;
 using JobBoard.Jobs.Core.Managers.Models.ViewModels;
 using JobBoard.Jobs.Tests.Fakes;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Requests;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 
@@ -10,11 +11,23 @@ namespace JobBoard.Jobs.Tests;
 
 public sealed class JobBusinessTests
 {
+    // A known request thread the business reads from and stamps onto every event it builds (ADR-0013).
+    private static readonly Guid CorrelationId = Guid.NewGuid();
+    private static readonly Guid ActorId = Guid.NewGuid();
+    private static readonly IRequestContext RequestContext = BuildContext();
+
+    private static AmbientRequestContext BuildContext()
+    {
+        var context = new AmbientRequestContext();
+        context.Populate(CorrelationId, ActorId, "employer");
+        return context;
+    }
+
     [Fact]
     public async Task PostAsync_TranslatesViewModelToOpenJob()
     {
         var dataLayer = new FakeJobDataLayer();
-        var business = new JobBusiness(dataLayer);
+        var business = new JobBusiness(dataLayer, RequestContext);
         var employerId = Guid.NewGuid();
 
         var vm = TestData.PostViewModel(
@@ -44,6 +57,12 @@ public sealed class JobBusinessTests
         Assert.Equal(employerId, posted.EmployerId);
         Assert.Equal("Platform Engineer", posted.Title);
         Assert.Equal(added.Location, posted.Location);
+
+        // Root of its request thread: correlation and actor come from the context, causation is the
+        // request's own id (ADR-0013, SCRUB A3).
+        Assert.Equal(CorrelationId, posted.CorrelationId);
+        Assert.Equal(CorrelationId, posted.CausationId);
+        Assert.Equal(ActorId, posted.ActorId);
     }
 
     [Fact]
@@ -51,7 +70,7 @@ public sealed class JobBusinessTests
     {
         var job = TestData.Job(status: JobStatus.Open);
         var dataLayer = new FakeJobDataLayer { GetResult = job };
-        var business = new JobBusiness(dataLayer);
+        var business = new JobBusiness(dataLayer, RequestContext);
 
         var result = await business.CloseAsync(job.Id);
 
@@ -64,6 +83,11 @@ public sealed class JobBusinessTests
         Assert.Equal(job.Id, @event.JobId);
         Assert.Equal(job.EmployerId, @event.EmployerId);
         Assert.Equal(job.Id, dataLayer.ClosedId);
+
+        // Carries the request thread it was built under (ADR-0013, SCRUB A3).
+        Assert.Equal(CorrelationId, @event.CorrelationId);
+        Assert.Equal(CorrelationId, @event.CausationId);
+        Assert.Equal(ActorId, @event.ActorId);
     }
 
     [Fact]
@@ -72,7 +96,7 @@ public sealed class JobBusinessTests
         // Read said Open, but a concurrent close won: the conditional close reports false.
         var job = TestData.Job(status: JobStatus.Open);
         var dataLayer = new FakeJobDataLayer { GetResult = job, CloseResult = false };
-        var business = new JobBusiness(dataLayer);
+        var business = new JobBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.CloseAsync(job.Id));
 
@@ -89,7 +113,7 @@ public sealed class JobBusinessTests
     {
         var job = TestData.Job(status: status);
         var dataLayer = new FakeJobDataLayer { GetResult = job };
-        var business = new JobBusiness(dataLayer);
+        var business = new JobBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.CloseAsync(job.Id));
 
@@ -103,7 +127,7 @@ public sealed class JobBusinessTests
     public async Task CloseAsync_OnMissingJob_Throws404_AndEmitsNoEvent()
     {
         var dataLayer = new FakeJobDataLayer { GetResult = null };
-        var business = new JobBusiness(dataLayer);
+        var business = new JobBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.CloseAsync(Guid.NewGuid()));
 
@@ -115,7 +139,7 @@ public sealed class JobBusinessTests
     [Fact]
     public async Task GetAsync_Missing_ReturnsNull()
     {
-        var business = new JobBusiness(new FakeJobDataLayer { GetResult = null });
+        var business = new JobBusiness(new FakeJobDataLayer { GetResult = null }, RequestContext);
 
         Assert.Null(await business.GetAsync(Guid.NewGuid()));
     }

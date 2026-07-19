@@ -23,7 +23,7 @@ public sealed class ApplicationDataLayerTests
         var dataLayer = new ApplicationDataLayer(repository, outbox, new FakeInbox());
 
         var application = TestData.Application();
-        var @event = application.ToApplicationSubmitted();
+        var @event = application.ToApplicationSubmitted(default);
 
         await dataLayer.SubmitAsync(application, @event);
 
@@ -43,7 +43,7 @@ public sealed class ApplicationDataLayerTests
 
         var application = TestData.Application();
         var ex = await Assert.ThrowsAsync<DomainException>(
-            () => dataLayer.SubmitAsync(application, application.ToApplicationSubmitted()));
+            () => dataLayer.SubmitAsync(application, application.ToApplicationSubmitted(default)));
 
         Assert.Equal("application.duplicate", ex.Code);
         Assert.Equal(StatusCodes.Status409Conflict, ex.StatusCode);
@@ -58,7 +58,7 @@ public sealed class ApplicationDataLayerTests
 
         var application = TestData.Application();
         await Assert.ThrowsAsync<DbUpdateException>(
-            () => dataLayer.SubmitAsync(application, application.ToApplicationSubmitted()));
+            () => dataLayer.SubmitAsync(application, application.ToApplicationSubmitted(default)));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class ApplicationDataLayerTests
         var dataLayer = new ApplicationDataLayer(repository, outbox, new FakeInbox());
 
         var application = TestData.Application(status: ApplicationStatus.Submitted);
-        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn);
+        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn, default);
 
         var withdrawn = await dataLayer.WithdrawAsync(application.Id, @event);
 
@@ -86,7 +86,7 @@ public sealed class ApplicationDataLayerTests
         var dataLayer = new ApplicationDataLayer(repository, outbox, new FakeInbox());
 
         var application = TestData.Application(status: ApplicationStatus.Submitted);
-        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn);
+        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn, default);
 
         var withdrawn = await dataLayer.WithdrawAsync(application.Id, @event);
 
@@ -103,7 +103,7 @@ public sealed class ApplicationDataLayerTests
         var dataLayer = new ApplicationDataLayer(repository, outbox, new FakeInbox());
 
         var application = TestData.Application(status: ApplicationStatus.Submitted);
-        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Reviewed);
+        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Reviewed, default);
 
         var advanced = await dataLayer.AdvanceAsync(
             application.Id, ApplicationStatus.Submitted, ApplicationStatus.Reviewed, @event);
@@ -121,7 +121,7 @@ public sealed class ApplicationDataLayerTests
         var dataLayer = new ApplicationDataLayer(repository, outbox, new FakeInbox());
 
         var application = TestData.Application(status: ApplicationStatus.Submitted);
-        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Reviewed);
+        var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Reviewed, default);
 
         var advanced = await dataLayer.AdvanceAsync(
             application.Id, ApplicationStatus.Submitted, ApplicationStatus.Reviewed, @event);
@@ -147,7 +147,7 @@ public sealed class ApplicationDataLayerTests
         var messageId = Guid.NewGuid();
         var closed = await dataLayer.CloseOpenApplicationsForJobAsync(
             jobId, messageId, ApplicationStatus.Rejected,
-            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected));
+            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected, default));
 
         Assert.Equal(2, closed);
         // Snapshot, the authoritative close, then a read-back of what actually moved — all in the transaction.
@@ -174,7 +174,7 @@ public sealed class ApplicationDataLayerTests
 
         var closed = await dataLayer.CloseOpenApplicationsForJobAsync(
             jobId, Guid.NewGuid(), ApplicationStatus.Rejected,
-            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected));
+            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected, default));
 
         Assert.Equal(1, closed);
         var @event = Assert.IsType<ApplicationStatusChanged>(Assert.Single(outbox.Enqueued));
@@ -191,7 +191,7 @@ public sealed class ApplicationDataLayerTests
 
         var closed = await dataLayer.CloseOpenApplicationsForJobAsync(
             Guid.NewGuid(), Guid.NewGuid(), ApplicationStatus.Rejected,
-            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected));
+            app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected, default));
 
         Assert.Equal(0, closed);
         // The inbox short-circuits before any read or write — no close, no events, no second inbox row.
@@ -212,7 +212,7 @@ public sealed class ApplicationDataLayerTests
         {
             var dataLayer = new ApplicationDataLayer(
                 new ApplicationRepository(context), new Outbox(context), new Inbox(context));
-            await dataLayer.SubmitAsync(application, application.ToApplicationSubmitted());
+            await dataLayer.SubmitAsync(application, application.ToApplicationSubmitted(default));
         }
 
         await using var assert = harness.CreateContext();
@@ -241,7 +241,7 @@ public sealed class ApplicationDataLayerTests
             // The conditional UPDATE flips the row inside the transaction, then the outbox write throws —
             // the status change must roll back with it.
             var dataLayer = new ApplicationDataLayer(repository, new FakeOutbox { ThrowOnEnqueue = true }, new Inbox(context));
-            var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn);
+            var @event = application.ToStatusChanged(ApplicationStatus.Submitted, ApplicationStatus.Withdrawn, default);
             await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.WithdrawAsync(application.Id, @event));
         }
 
@@ -276,7 +276,7 @@ public sealed class ApplicationDataLayerTests
                 new ApplicationRepository(context), new Outbox(context), new Inbox(context));
             return dataLayer.CloseOpenApplicationsForJobAsync(
                 jobId, messageId, ApplicationStatus.Rejected,
-                app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected));
+                app => app.ToStatusChanged(app.Status, ApplicationStatus.Rejected, default));
         };
 
         int firstClosed;

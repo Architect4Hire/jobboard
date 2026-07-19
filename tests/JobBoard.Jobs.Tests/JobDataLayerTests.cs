@@ -21,7 +21,7 @@ public sealed class JobDataLayerTests
         var outbox = new FakeOutbox();
         var dataLayer = new JobDataLayer(repository, outbox);
 
-        var @event = TestData.Job().ToJobClosed();
+        var @event = TestData.Job().ToJobClosed(default);
 
         var didClose = await dataLayer.CloseAsync(@event.JobId, @event);
 
@@ -38,7 +38,7 @@ public sealed class JobDataLayerTests
         var outbox = new FakeOutbox();
         var dataLayer = new JobDataLayer(repository, outbox);
 
-        var @event = TestData.Job().ToJobClosed();
+        var @event = TestData.Job().ToJobClosed(default);
 
         var didClose = await dataLayer.CloseAsync(@event.JobId, @event);
 
@@ -55,7 +55,7 @@ public sealed class JobDataLayerTests
         var dataLayer = new JobDataLayer(repository, outbox);
 
         var job = TestData.Job();
-        var posted = job.ToJobPosted();
+        var posted = job.ToJobPosted(default);
 
         await dataLayer.AddAsync(job, posted);
 
@@ -74,7 +74,7 @@ public sealed class JobDataLayerTests
         var dataLayer = new JobDataLayer(repository, new FakeOutbox());
 
         var job = TestData.Job();
-        var ex = await Assert.ThrowsAsync<DomainException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
+        var ex = await Assert.ThrowsAsync<DomainException>(() => dataLayer.AddAsync(job, job.ToJobPosted(default)));
 
         Assert.Equal("job.classification_conflict", ex.Code);
         Assert.Equal(StatusCodes.Status409Conflict, ex.StatusCode);
@@ -89,7 +89,7 @@ public sealed class JobDataLayerTests
 
         // Not a slug conflict — it must surface as-is (→ the global handler's 500), not a 409.
         var job = TestData.Job();
-        await Assert.ThrowsAsync<DbUpdateException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
+        await Assert.ThrowsAsync<DbUpdateException>(() => dataLayer.AddAsync(job, job.ToJobPosted(default)));
     }
 
     // ---- Atomicity (real SQLite): the status change and the outbox row are one unit ----
@@ -107,7 +107,7 @@ public sealed class JobDataLayerTests
             // The insert stages inside the transaction, then the JobPosted outbox write throws — the
             // job (and its classifications) must roll back with it, leaving nothing committed.
             var dataLayer = new JobDataLayer(repository, new FakeOutbox { ThrowOnEnqueue = true });
-            await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.AddAsync(job, job.ToJobPosted()));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.AddAsync(job, job.ToJobPosted(default)));
         }
 
         await using var assert = harness.CreateContext();
@@ -130,7 +130,7 @@ public sealed class JobDataLayerTests
         await using (var context = harness.CreateContext())
         {
             var repository = new JobRepository(context);
-            var @event = job.ToJobClosed();
+            var @event = job.ToJobClosed(default);
 
             var dataLayer = new JobDataLayer(repository, new Outbox(context));
             var didClose = await dataLayer.CloseAsync(job.Id, @event);
@@ -162,7 +162,7 @@ public sealed class JobDataLayerTests
             var repository = new JobRepository(context);
             var dataLayer = new JobDataLayer(repository, new Outbox(context));
 
-            var didClose = await dataLayer.CloseAsync(job.Id, job.ToJobClosed());
+            var didClose = await dataLayer.CloseAsync(job.Id, job.ToJobClosed(default));
 
             Assert.False(didClose);
         }
@@ -191,7 +191,7 @@ public sealed class JobDataLayerTests
             // The conditional UPDATE flips the row inside the transaction, then the outbox write throws —
             // the status change must roll back with it.
             var dataLayer = new JobDataLayer(repository, new FakeOutbox { ThrowOnEnqueue = true });
-            await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.CloseAsync(job.Id, job.ToJobClosed()));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => dataLayer.CloseAsync(job.Id, job.ToJobClosed(default)));
         }
 
         await using var assert = harness.CreateContext();

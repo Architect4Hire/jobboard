@@ -2,6 +2,7 @@ using JobBoard.Contracts;
 using JobBoard.Jobs.Core.Managers.Models.Domain;
 using JobBoard.Jobs.Core.Managers.Models.ServiceModels;
 using JobBoard.Jobs.Core.Managers.Models.ViewModels;
+using JobBoard.Shared.Requests;
 
 namespace JobBoard.Jobs.Core.Managers.Mappers;
 
@@ -56,16 +57,28 @@ public static class JobMappers
 
     /// <summary>
     /// Builds the <see cref="JobPosted"/> fact for a job that has just been created, stamping a fresh
-    /// event id (its outbox-row key and Service Bus <c>MessageId</c>). Carries the denormalized title and
-    /// location a consumer needs, and reuses the job's creation time as the posted time.
+    /// event id (its outbox-row key and Service Bus <c>MessageId</c>) and the audit <paramref name="thread"/>
+    /// (ADR-0013). Carries the denormalized title and location a consumer needs, and reuses the job's
+    /// creation time as the posted time.
     /// </summary>
-    public static JobPosted ToJobPosted(this Job job) =>
-        new(Guid.NewGuid(), job.Id, job.EmployerId, job.Title, job.Location, job.CreatedOnUtc);
+    public static JobPosted ToJobPosted(this Job job, AuditThread thread) =>
+        new(Guid.NewGuid(), job.Id, job.EmployerId, job.Title, job.Location, job.CreatedOnUtc)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
 
     /// <summary>
     /// Builds the <see cref="JobClosed"/> fact for a job that has just been closed, stamping a fresh
-    /// event id (its outbox-row key and Service Bus <c>MessageId</c>) and the close timestamp.
+    /// event id (its outbox-row key and Service Bus <c>MessageId</c>), the audit <paramref name="thread"/>
+    /// (ADR-0013), and the close timestamp.
     /// </summary>
-    public static JobClosed ToJobClosed(this Job job) =>
-        new(Guid.NewGuid(), job.Id, job.EmployerId, DateTime.UtcNow);
+    public static JobClosed ToJobClosed(this Job job, AuditThread thread) =>
+        new(Guid.NewGuid(), job.Id, job.EmployerId, DateTime.UtcNow)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
 }

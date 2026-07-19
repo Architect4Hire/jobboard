@@ -2,6 +2,7 @@ using JobBoard.Applications.Core.Managers.Models.Domain;
 using JobBoard.Applications.Core.Managers.Models.ServiceModels;
 using JobBoard.Applications.Core.Managers.Models.ViewModels;
 using JobBoard.Contracts;
+using JobBoard.Shared.Requests;
 
 namespace JobBoard.Applications.Core.Managers.Mappers;
 
@@ -38,16 +39,22 @@ public static class ApplicationMappers
         application.SubmittedOnUtc,
         application.StatusChangedOnUtc);
 
-    // Builds the ApplicationSubmitted fact — stamps a fresh event id.
-    public static ApplicationSubmitted ToApplicationSubmitted(this Application application) =>
-        new(Guid.NewGuid(), application.Id, application.CandidateId, application.JobId, application.SubmittedOnUtc);
+    // Builds the ApplicationSubmitted fact — stamps a fresh event id and the audit thread (ADR-0013).
+    public static ApplicationSubmitted ToApplicationSubmitted(this Application application, AuditThread thread) =>
+        new(Guid.NewGuid(), application.Id, application.CandidateId, application.JobId, application.SubmittedOnUtc)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
 
-    // Builds the ApplicationStatusChanged fact — stamps a fresh event id; statuses are carried as strings
-    // (Contracts never references the ApplicationStatus enum).
+    // Builds the ApplicationStatusChanged fact — stamps a fresh event id and the audit thread (ADR-0013);
+    // statuses are carried as strings (Contracts never references the ApplicationStatus enum).
     public static ApplicationStatusChanged ToStatusChanged(
         this Application application,
         ApplicationStatus from,
-        ApplicationStatus to) =>
+        ApplicationStatus to,
+        AuditThread thread) =>
         new(
             Guid.NewGuid(),
             application.Id,
@@ -55,5 +62,10 @@ public static class ApplicationMappers
             application.JobId,
             from.ToString(),
             to.ToString(),
-            DateTime.UtcNow);
+            DateTime.UtcNow)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
 }

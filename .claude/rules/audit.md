@@ -5,6 +5,8 @@ paths:
   - src/JobBoard.Audit/**
   - src/JobBoard.Audit.Core/**
   - src/JobBoard.*/Consumers/**
+  - src/JobBoard.*.Core/Business/**
+  - src/JobBoard.*.Core/Managers/Mappers/**
 ---
 # Audit rules — support audit trail (correlation, causation, actor)
 

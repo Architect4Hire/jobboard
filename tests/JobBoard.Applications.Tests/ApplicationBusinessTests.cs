@@ -3,6 +3,7 @@ using JobBoard.Applications.Core.Managers.Models.Domain;
 using JobBoard.Applications.Tests.Fakes;
 using JobBoard.Contracts;
 using JobBoard.Shared.Errors;
+using JobBoard.Shared.Requests;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 
@@ -10,11 +11,23 @@ namespace JobBoard.Applications.Tests;
 
 public sealed class ApplicationBusinessTests
 {
+    // A known request thread the business reads from and stamps onto request-initiated events (ADR-0013).
+    private static readonly Guid CorrelationId = Guid.NewGuid();
+    private static readonly Guid ActorId = Guid.NewGuid();
+    private static readonly IRequestContext RequestContext = BuildContext();
+
+    private static AmbientRequestContext BuildContext()
+    {
+        var context = new AmbientRequestContext();
+        context.Populate(CorrelationId, ActorId, "candidate");
+        return context;
+    }
+
     [Fact]
     public async Task SubmitAsync_TranslatesViewModelToSubmittedApplication_AndBuildsEvent()
     {
         var dataLayer = new FakeApplicationDataLayer();
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
         var candidateId = Guid.NewGuid();
         var jobId = Guid.NewGuid();
 
@@ -36,6 +49,12 @@ public sealed class ApplicationBusinessTests
         Assert.Equal(candidateId, @event.CandidateId);
         Assert.Equal(jobId, @event.JobId);
 
+        // Root of its request thread: correlation and actor from the context, causation is the request's
+        // own id (ADR-0013, SCRUB A3).
+        Assert.Equal(CorrelationId, @event.CorrelationId);
+        Assert.Equal(CorrelationId, @event.CausationId);
+        Assert.Equal(ActorId, @event.ActorId);
+
         Assert.Equal(added.Id, result.Id);
         Assert.Equal(ApplicationStatus.Submitted, result.Status);
     }
@@ -48,7 +67,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: current);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var result = await business.WithdrawAsync(application.Id);
 
@@ -59,6 +78,11 @@ public sealed class ApplicationBusinessTests
         Assert.Equal(application.Id, @event!.ApplicationId);
         Assert.Equal(current.ToString(), @event.FromStatus);
         Assert.Equal(nameof(ApplicationStatus.Withdrawn), @event.ToStatus);
+
+        // Request-initiated: carries the request thread (ADR-0013, SCRUB A3).
+        Assert.Equal(CorrelationId, @event.CorrelationId);
+        Assert.Equal(CorrelationId, @event.CausationId);
+        Assert.Equal(ActorId, @event.ActorId);
     }
 
     [Theory]
@@ -68,7 +92,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: terminal);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.WithdrawAsync(application.Id));
 
@@ -82,7 +106,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: ApplicationStatus.Submitted);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application, WithdrawResult = false };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.WithdrawAsync(application.Id));
 
@@ -96,7 +120,7 @@ public sealed class ApplicationBusinessTests
     public async Task WithdrawAsync_OnMissingApplication_Throws404()
     {
         var dataLayer = new FakeApplicationDataLayer { GetResult = null };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.WithdrawAsync(Guid.NewGuid()));
 
@@ -113,7 +137,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: from);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var result = await business.AdvanceAsync(application.Id, TestData.AdvanceViewModel(to));
 
@@ -125,6 +149,11 @@ public sealed class ApplicationBusinessTests
         Assert.NotNull(@event);
         Assert.Equal(from.ToString(), @event!.FromStatus);
         Assert.Equal(to.ToString(), @event.ToStatus);
+
+        // Request-initiated: carries the request thread (ADR-0013, SCRUB A3).
+        Assert.Equal(CorrelationId, @event.CorrelationId);
+        Assert.Equal(CorrelationId, @event.CausationId);
+        Assert.Equal(ActorId, @event.ActorId);
     }
 
     [Theory]
@@ -136,7 +165,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: from);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(() => business.AdvanceAsync(application.Id, TestData.AdvanceViewModel(to)));
 
@@ -150,7 +179,7 @@ public sealed class ApplicationBusinessTests
     {
         var application = TestData.Application(status: ApplicationStatus.Submitted);
         var dataLayer = new FakeApplicationDataLayer { GetResult = application, AdvanceResult = false };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(
             () => business.AdvanceAsync(application.Id, TestData.AdvanceViewModel(ApplicationStatus.Reviewed)));
@@ -163,7 +192,7 @@ public sealed class ApplicationBusinessTests
     public async Task AdvanceAsync_OnMissingApplication_Throws404()
     {
         var dataLayer = new FakeApplicationDataLayer { GetResult = null };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
         var ex = await Assert.ThrowsAsync<DomainException>(
             () => business.AdvanceAsync(Guid.NewGuid(), TestData.AdvanceViewModel(ApplicationStatus.Reviewed)));
@@ -177,9 +206,17 @@ public sealed class ApplicationBusinessTests
     {
         var jobId = Guid.NewGuid();
         var dataLayer = new FakeApplicationDataLayer { CloseResult = 3 };
-        var business = new ApplicationBusiness(dataLayer);
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
 
-        var jobClosed = new JobClosed(Guid.NewGuid(), jobId, Guid.NewGuid(), DateTime.UtcNow);
+        // The consumed event carries its own audit thread; the follow-on must inherit it.
+        var incomingCorrelation = Guid.NewGuid();
+        var incomingActor = Guid.NewGuid();
+        var jobClosed = new JobClosed(Guid.NewGuid(), jobId, Guid.NewGuid(), DateTime.UtcNow)
+        {
+            CorrelationId = incomingCorrelation,
+            CausationId = Guid.NewGuid(),
+            ActorId = incomingActor,
+        };
 
         await business.HandleJobClosedAsync(jobClosed);
 
@@ -193,12 +230,18 @@ public sealed class ApplicationBusinessTests
         Assert.Equal(snapshot.Id, built.ApplicationId);
         Assert.Equal(nameof(ApplicationStatus.Reviewed), built.FromStatus);
         Assert.Equal(nameof(ApplicationStatus.Rejected), built.ToStatus);
+
+        // Follow-on thread: correlation and actor inherited from JobClosed, causation is JobClosed's id
+        // (its direct cause) — not the request context, which is empty on the consumer path (SCRUB A3).
+        Assert.Equal(incomingCorrelation, built.CorrelationId);
+        Assert.Equal(jobClosed.Id, built.CausationId);
+        Assert.Equal(incomingActor, built.ActorId);
     }
 
     [Fact]
     public async Task GetAsync_Missing_ReturnsNull()
     {
-        var business = new ApplicationBusiness(new FakeApplicationDataLayer { GetResult = null });
+        var business = new ApplicationBusiness(new FakeApplicationDataLayer { GetResult = null }, RequestContext);
 
         Assert.Null(await business.GetAsync(Guid.NewGuid()));
     }
