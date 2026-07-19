@@ -11,4 +11,14 @@ public sealed record JobPosted(
     Guid EmployerId,
     string Title,
     string Location,
-    DateTime PostedOnUtc) : IIntegrationEvent;
+    DateTime PostedOnUtc) : IIntegrationEvent
+{
+    /// <inheritdoc/>
+    public Guid CorrelationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid CausationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid? ActorId { get; init; }
+}

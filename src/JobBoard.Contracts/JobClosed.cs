@@ -11,4 +11,14 @@ namespace JobBoard.Contracts;
 /// <param name="JobId">The posting that was closed (its identity in the Jobs service).</param>
 /// <param name="EmployerId">The employer that owned the posting; duplicated reference data, not a cross-service FK.</param>
 /// <param name="ClosedOnUtc">When the posting was closed.</param>
-public sealed record JobClosed(Guid Id, Guid JobId, Guid EmployerId, DateTime ClosedOnUtc) : IIntegrationEvent;
+public sealed record JobClosed(Guid Id, Guid JobId, Guid EmployerId, DateTime ClosedOnUtc) : IIntegrationEvent
+{
+    /// <inheritdoc/>
+    public Guid CorrelationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid CausationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid? ActorId { get; init; }
+}

@@ -22,4 +22,14 @@ public sealed record ApplicationStatusChanged(
     Guid JobId,
     string FromStatus,
     string ToStatus,
-    DateTime ChangedOnUtc) : IIntegrationEvent;
+    DateTime ChangedOnUtc) : IIntegrationEvent
+{
+    /// <inheritdoc/>
+    public Guid CorrelationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid CausationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid? ActorId { get; init; }
+}

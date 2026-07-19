@@ -18,4 +18,14 @@ public sealed record ApplicationSubmitted(
     Guid ApplicationId,
     Guid CandidateId,
     Guid JobId,
-    DateTime SubmittedOnUtc) : IIntegrationEvent;
+    DateTime SubmittedOnUtc) : IIntegrationEvent
+{
+    /// <inheritdoc/>
+    public Guid CorrelationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid CausationId { get; init; }
+
+    /// <inheritdoc/>
+    public Guid? ActorId { get; init; }
+}
