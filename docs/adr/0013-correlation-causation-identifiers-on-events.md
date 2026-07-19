@@ -1,9 +1,9 @@
 # ADR-0013: Correlation & causation identifiers on integration events
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-19
 - **Deciders:** Robert Felkins
-- **Related:** ADR-0002 (events), ADR-0010 (contracts leaf), ADR-0011 (actor propagation), ADR-0014 (audit trail), `docs/high-level-design.md` §6
+- **Related:** ADR-0002 (events), ADR-0010 (contracts leaf), ADR-0015 (actor projection mechanism), ADR-0011 (identity remediation), ADR-0014 (audit trail), `docs/high-level-design.md` §6
 
 ## Context
 
@@ -19,7 +19,7 @@ This is a **Contracts** decision because it changes the shape every publisher an
 
 - **`CorrelationId`** — constant across the entire fan-out of one originating request. Minted at the gateway (ADR-0011's edge) when a request arrives without one, and propagated inward; every event a request spawns, directly or transitively, carries the same value.
 - **`CausationId`** — the `Id` of the event (or inbound command) that *directly* caused this event. For a request-initiated event it is the request's own id; for a follow-on event it is the parent event's `Id`. `JobClosed → ApplicationStatusChanged` sets the latter's `CausationId = JobClosed.Id`, while both keep the original `CorrelationId`. This yields a **causal tree**, not just a flat timeline.
-- **Actor** — the authenticated identity that performed the action, taken from the propagated edge identity (ADR-0011), **never** from body-supplied ids. Carried on the event so the audit trail records *who*.
+- **Actor** — the authenticated identity that performed the action, taken from the propagated edge identity (ADR-0015; the broader identity remediation is ADR-0011), **never** from body-supplied ids. Carried on the event so the audit trail records *who*.
 - **Where it's set.** Business *builds* the event (as today) and stamps these fields from the ambient request context; the outbox write and the dispatcher (ADR-0003) are otherwise unchanged. `Contracts` stays a leaf (ADR-0010) — these are plain fields, no behavior, no EF.
 
 ## Consequences
@@ -32,7 +32,7 @@ This is a **Contracts** decision because it changes the shape every publisher an
 **Negative**
 - Changing `IIntegrationEvent` is a **contract change touching every event record, publisher, and consumer** — a coordinated change (and, per `CLAUDE.md`, a design conversation before code because it spans services). The `api-contract-checker` and every service's tests gate it.
 - Every publish site must now supply the ambient context; a publish that leaves `CorrelationId`/actor unset is a defect the `audit.md` rule and review exist to catch.
-- Depends on ADR-0011 being implemented for a trustworthy actor — until then, actor is only as good as the identity seam.
+- Depends on ADR-0015 (identity projection) being implemented for a trustworthy actor — until then, actor is only as good as the identity seam.
 
 **Neutral**
 - These fields are independent of any broker- or transport-level metadata; they hold across redelivery and long outages because they live in the payload, not in a message header window.

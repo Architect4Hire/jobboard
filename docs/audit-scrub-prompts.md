@@ -87,15 +87,17 @@ api-contract-checker, and summarize the blast radius you actually touched.
 ```
 SCOPE: Make the gateway the origin of the request thread and the identity. Mint a CorrelationId when a
 request arrives without one, strip any client-supplied copy, forward it inward as a trusted header, and
-echo it on the response. Implement ADR-0011's identity projection in the same pass: project the
-validated sub/role into X-User-Id/X-User-Role, stripping client copies. Read both on the service side
-into an ambient request context the publish path can reach.
+echo it on the response. Implement ADR-0015's identity-projection MECHANISM in the same pass: project
+the validated sub/role into X-User-Id/X-User-Role, stripping client copies. Read both on the service
+side into an ambient request context the publish path can reach.
 
-CONSTRAINT: Follow .claude/rules/gateway.md, .claude/rules/audit.md, ADR-0011. Edge cross-cutting only;
+CONSTRAINT: Follow .claude/rules/gateway.md, .claude/rules/audit.md, ADR-0015. Edge cross-cutting only;
 keep the gateway declarative.
 
 RESTRICTION: Do NOT trust a client-supplied CorrelationId or identity header past the edge — strip and
-re-mint/re-project. Do NOT put business logic in the gateway. No hardcoded addresses.
+re-mint/re-project. Do NOT put business logic in the gateway. No hardcoded addresses. Do NOT do the
+broader BOLA/IDOR remediation here (removing EmployerId/CandidateId from ViewModels, role-authorization
+policies) — that is ADR-0011, a separate security effort out of scope for this sequence.
 
 USAGE: Verify YARP transform syntax against https://aspire.dev and the YARP docs before wiring. Use
 plan mode. Delegate review to the code-reviewer + /security-review (this is a spoofing surface).

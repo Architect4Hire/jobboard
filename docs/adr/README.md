@@ -18,10 +18,11 @@ ADRs are immutable once **Accepted**: to change a decision, add a new ADR that *
 | [0008](./0008-aspire-local-first-servicebus-emulator.md)     | Aspire local-first topology + Service Bus emulator              | Accepted |
 | [0009](./0009-read-through-cache-generation-invalidation.md) | Fail-open read-through cache with generation-token invalidation | Accepted |
 | [0010](./0010-contracts-leaf-status-as-string.md)            | Contracts as a leaf library; status crosses as strings          | Accepted |
-| [0011](./0011-token-derived-identity-propagation.md)         | Token-derived identity propagation at the gateway               | Proposed |
+| [0011](./0011-token-derived-identity-propagation.md)         | Token-derived identity propagation (BOLA/IDOR remediation)      | Proposed |
 | [0012](./0012-cross-service-read-model-strategy.md)          | Cross-service read-model / query composition strategy           | Proposed |
-| [0013](./0013-correlation-causation-identifiers-on-events.md) | Correlation & causation identifiers on integration events       | Proposed |
-| [0014](./0014-audit-bounded-context-bus-fed-support-trail.md) | The Audit bounded context — a bus-fed support audit trail       | Proposed |
+| [0013](./0013-correlation-causation-identifiers-on-events.md) | Correlation & causation identifiers on integration events       | Accepted |
+| [0014](./0014-audit-bounded-context-bus-fed-support-trail.md) | The Audit bounded context — a bus-fed support audit trail       | Accepted |
+| [0015](./0015-gateway-identity-projection-header-mechanism.md) | Gateway identity projection as trusted headers (the mechanism)  | Accepted |
 
 ## Statuses
 

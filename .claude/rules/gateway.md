@@ -22,8 +22,8 @@ routing and cross-cutting edge concerns only, no business logic.
 - **Edge cross-cutting only.** Rate limiting, CORS for the Angular origin, and request/trace
   propagation belong here; anything domain-specific belongs in a service. The gateway calls
   `AddServiceDefaults()` so its traces join the rest. Minting and forwarding the per-request
-  `CorrelationId` (and projecting the caller's identity, ADR-0011) is part of this — see
-  `.claude/rules/audit.md`.
+  `CorrelationId` (and projecting the caller's identity as trusted headers, ADR-0015) is part of this —
+  see `.claude/rules/audit.md`.
 - **Stable public contract.** The gateway's public paths are the contract the frontend depends on;
   the service boundaries behind them can move without the client noticing. Don't reshape a public
   path casually.

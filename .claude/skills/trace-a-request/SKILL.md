@@ -45,7 +45,7 @@ pull that request's full trail and read its causal structure.
    "A caused B caused C" — e.g. *close job* → `JobClosed` → `ApplicationStatusChanged` (auto-closed) →
    a notification recorded.
 
-3. **Read the actor and payload** on each row: *who* did it (the propagated identity, ADR-0011) and the
+3. **Read the actor and payload** on each row: *who* did it (the propagated identity, ADR-0015) and the
    event detail in the `jsonb` payload. Support-facing fields only surface here — secrets/PII were kept
    out at write time (audit.md), so if something you need isn't recorded, that's a coverage gap, not a
    query you should work around by reaching into a service's DB.

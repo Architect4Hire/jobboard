@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-07-18
 - **Deciders:** Robert Felkins
-- **Related:** ADR-0006 (gateway), ADR-0007 (JWT), `docs/high-level-design.md` §8.1, `docs/ongoing-architecture-plan.md` §5.1 (risks #1–2)
+- **Related:** ADR-0006 (gateway), ADR-0007 (JWT), ADR-0015 (the projection *mechanism*, carved out and Accepted for audit attribution), ADR-0013 / ADR-0014 (the audit trail that depends on the actor), `docs/high-level-design.md` §8.1, `docs/ongoing-architecture-plan.md` §5.1 (risks #1–2)
 
 ## Context
 
@@ -42,4 +42,6 @@ This is an architectural decision because it defines **where identity becomes tr
 
 ## Notes
 
-This ADR is **Proposed** and corresponds to the 30-day, ship-blocking items in `docs/ongoing-architecture-plan.md` §9. Promote to **Accepted** once the propagation mechanism (header projection vs. JWT forwarding) is chosen and implemented.
+This ADR is **Proposed** and corresponds to the 30-day, ship-blocking items in `docs/ongoing-architecture-plan.md` §9.
+
+**Scope split (2026-07-19):** the audit-trail work needed a trustworthy actor, so the **projection mechanism** — step 1 above (gateway projects `sub`/`role` into `X-User-Id`/`X-User-Role`, strips client copies) — has been carved out and **Accepted** as ADR-0015, on the header-projection option. This ADR is now the **BOLA/IDOR remediation** that still remains: steps 2–4 (remove `EmployerId`/`CandidateId` from ViewModels, enforce role policies at the edge, per-object ownership checks). It stays Proposed and ships as a separate security effort; promote it to Accepted when that work is scheduled.

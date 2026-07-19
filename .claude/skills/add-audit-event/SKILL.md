@@ -65,7 +65,7 @@ Every auditable event carries, beyond its own `Id`:
   request-initiated action, or the **consumed event's `Id`** when the action is a reaction (a consumer
   that emits a follow-on event inherits the consumed event's `CorrelationId` and sets its
   `CausationId` to that event's `Id`).
-- **actor** — the authenticated identity from the propagated edge headers (ADR-0011), **never** a
+- **actor** — the authenticated identity from the propagated edge headers (ADR-0015), **never** a
   body-supplied id. For unauthenticated cradle events (e.g. registration), record the subject the
   action creates, and mark it as self-originated — not a spoofable client value.
 

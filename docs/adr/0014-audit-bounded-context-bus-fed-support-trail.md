@@ -1,9 +1,9 @@
 # ADR-0014: The Audit bounded context — a bus-fed support audit trail
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-19
 - **Deciders:** Robert Felkins
-- **Related:** ADR-0001 (database-per-service), ADR-0002 (events), ADR-0004 (idempotent inbox), ADR-0012 (cross-service read model), ADR-0013 (correlation/causation ids), ADR-0011 (actor), `docs/high-level-design.md` §6, §8.1
+- **Related:** ADR-0001 (database-per-service), ADR-0002 (events), ADR-0004 (idempotent inbox), ADR-0012 (cross-service read model), ADR-0013 (correlation/causation ids), ADR-0015 (actor projection), ADR-0011 (identity remediation), `docs/high-level-design.md` §6, §8.1
 
 ## Context
 
@@ -24,7 +24,7 @@ Two boundaries constrain the answer. **No shared database** (ADR-0001): a per-se
 - **One read-only query route at the gateway.** Support queries — by `CorrelationId` (a request's whole fan-out), by entity id (one application's life), by actor, or by time window — go through a single auth-protected gateway route (ADR-0006) to the Audit service. `auditdb` is never exposed directly.
 - **A read model, never a source of truth.** Audit never calls back into a service and never drives domain behavior; the owning service stays authoritative (ADR-0001, ADR-0012).
 
-Depends on **ADR-0013** (the ids to stitch and attribute by) and **ADR-0011** (a trustworthy actor); promoting this to Accepted should promote ADR-0011 with it.
+Depends on **ADR-0013** (the ids to stitch and attribute by) and **ADR-0015** (the identity-projection mechanism that supplies a trustworthy actor). The broader BOLA/IDOR remediation (ADR-0011) is deliberately *not* a prerequisite — it ships separately; until it does, the actor is trustworthy for attribution but authorization hardening remains outstanding (see ADR-0015).
 
 ## Consequences
 

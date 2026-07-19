@@ -20,8 +20,8 @@ event contract (ADR-0013) — deliberately **not** OpenTelemetry tracing. The st
   gateway.
 - **Every integration event carries correlation, causation, and actor.** `CorrelationId` stays constant
   across a request's whole fan-out; `CausationId` is the `Id` of the event or command that *directly*
-  caused this one (parent → child, a causal tree); actor is the authenticated identity from the edge
-  (ADR-0011), **never** a body-supplied id. Business stamps these when it builds the event; the outbox
+  caused this one (parent → child, a causal tree); actor is the authenticated identity projected by the
+  edge (ADR-0015), **never** a body-supplied id. Business stamps these when it builds the event; the outbox
   and dispatcher path is otherwise unchanged (see `.claude/rules/messaging.md`).
 - **The `JobBoard.Audit` service is the only writer of `auditdb`, and it only appends.** It consumes
   every business event and writes one **immutable** row — event type, correlation, causation, actor,
