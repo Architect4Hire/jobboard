@@ -7,6 +7,7 @@
     <ProjectReference Include="..\JobBoard.Identity\JobBoard.Identity.csproj" />
     <ProjectReference Include="..\JobBoard.Profiles\JobBoard.Profiles.csproj" />
     <ProjectReference Include="..\JobBoard.Notifications\JobBoard.Notifications.csproj" />
+    <ProjectReference Include="..\JobBoard.Audit\JobBoard.Audit.csproj" />
   </ItemGroup>
 
   <ItemGroup>

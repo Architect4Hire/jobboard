@@ -13,6 +13,8 @@
     <Project Path="src/JobBoard.Profiles.Core/JobBoard.Profiles.Core.csproj" />
     <Project Path="src/JobBoard.Notifications/JobBoard.Notifications.csproj" />
     <Project Path="src/JobBoard.Notifications.Core/JobBoard.Notifications.Core.csproj" />
+    <Project Path="src/JobBoard.Audit/JobBoard.Audit.csproj" />
+    <Project Path="src/JobBoard.Audit.Core/JobBoard.Audit.Core.csproj" />
     <Project Path="src/JobBoard.ServiceDefaults/JobBoard.ServiceDefaults.csproj" />
     <Project Path="src/JobBoard.Shared/JobBoard.Shared.csproj" />
   </Folder>

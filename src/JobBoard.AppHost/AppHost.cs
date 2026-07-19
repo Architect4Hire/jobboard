@@ -9,6 +9,7 @@ var applicationsDb = postgres.AddDatabase("applicationsdb");
 var identityDb = postgres.AddDatabase("identitydb");
 var profilesDb = postgres.AddDatabase("profilesdb");
 var notificationsDb = postgres.AddDatabase("notificationsdb");
+var auditDb = postgres.AddDatabase("auditdb");
 
 // Shared HMAC signing key for the JWTs Identity issues and the gateway validates. Kept out of source:
 // supplied via AppHost config/user-secrets (Jwt:SigningKey) when present, otherwise a per-run generated
@@ -36,23 +37,30 @@ var serviceBus = builder.AddAzureServiceBus("servicebus")
 // The first integration event. The topic name matches the outbox row's Destination (the event-type
 // name), so the dispatcher's sender finds it. The subscription is where the Applications consumer reads.
 // Resource names are GLOBALLY unique across every type in the model, so the subscription can't just be
-// "applications" (that's the service's project resource name) — it names the (service, event) pair.
-serviceBus.AddServiceBusTopic("JobClosed")
-    .AddServiceBusSubscription("applications-jobclosed");
+// "applications" (that's the service's project resource name) — it names the (service, event) pair. Each
+// topic also carries an "audit-*" subscription: the JobBoard.Audit service is a second, independent
+// subscriber that records every event to auditdb (ADR-0014) — a new subscriber, not a new publish path.
+var jobClosedTopic = serviceBus.AddServiceBusTopic("JobClosed");
+jobClosedTopic.AddServiceBusSubscription("applications-jobclosed");
+jobClosedTopic.AddServiceBusSubscription("audit-jobclosed");
 
 // Events Applications publishes. Topic name = event-type name (the outbox Destination convention), so
 // the dispatcher's sender finds them. Each forward-declares the future Notifications subscription so a
 // relayed message lands somewhere peekable on the emulator — the same pattern used for JobClosed's
 // "applications" subscription above. Subscription names are GLOBALLY unique in the Aspire model (not
 // per-topic), so they carry the topic in the name.
-serviceBus.AddServiceBusTopic("ApplicationSubmitted")
-    .AddServiceBusSubscription("notifications-submitted");
-serviceBus.AddServiceBusTopic("ApplicationStatusChanged")
-    .AddServiceBusSubscription("notifications-status-changed");
+var applicationSubmittedTopic = serviceBus.AddServiceBusTopic("ApplicationSubmitted");
+applicationSubmittedTopic.AddServiceBusSubscription("notifications-submitted");
+applicationSubmittedTopic.AddServiceBusSubscription("audit-submitted");
+
+var applicationStatusChangedTopic = serviceBus.AddServiceBusTopic("ApplicationStatusChanged");
+applicationStatusChangedTopic.AddServiceBusSubscription("notifications-status-changed");
+applicationStatusChangedTopic.AddServiceBusSubscription("audit-statuschanged");
 
 // Jobs publishes JobPosted from its post-job endpoint (through its outbox); Notifications consumes it.
-serviceBus.AddServiceBusTopic("JobPosted")
-    .AddServiceBusSubscription("notifications-jobposted");
+var jobPostedTopic = serviceBus.AddServiceBusTopic("JobPosted");
+jobPostedTopic.AddServiceBusSubscription("notifications-jobposted");
+jobPostedTopic.AddServiceBusSubscription("audit-jobposted");
 
 // First bounded service: owns jobsdb, talks to the bus (outbox dispatcher + processor host), and caches
 // its job list in Redis (the only service wired to the cache for now).
@@ -97,6 +105,16 @@ builder.AddProject<Projects.JobBoard_Notifications>("notifications")
     .WithReference(notificationsDb)
     .WithReference(serviceBus)
     .WaitFor(notificationsDb)
+    .WaitFor(serviceBus);
+
+// Audit: owns auditdb, the bus-fed support audit trail (ADR-0014). Consumer-only — it subscribes to
+// every business event (via the "audit-*" subscriptions declared above) and appends an immutable row.
+// No public HTTP surface yet, so the gateway does NOT reference it (the read-only support-query route is
+// SCRUB A6). Runs the shared Service Bus processor host, so it uses the bus.
+builder.AddProject<Projects.JobBoard_Audit>("audit")
+    .WithReference(auditDb)
+    .WithReference(serviceBus)
+    .WaitFor(auditDb)
     .WaitFor(serviceBus);
 
 // The gateway is the only public entry point. It references each proxied service so YARP can resolve the
