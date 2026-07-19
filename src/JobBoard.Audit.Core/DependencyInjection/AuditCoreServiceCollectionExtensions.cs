@@ -1,18 +1,23 @@
+using JobBoard.Audit.Core.Business;
+using JobBoard.Audit.Core.Data;
+using JobBoard.Audit.Core.Facade;
+
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers the Audit.Core stack. The host's composition root calls this alongside the shared
-/// persistence/messaging spine.
+/// Registers the Audit.Core stack (facade → business → data → repository). The host's composition root
+/// calls this alongside the shared persistence/messaging spine. No validators (events aren't validated)
+/// and no outbox usage (Audit is consumer-only and publishes nothing) — only the append path.
 /// </summary>
-/// <remarks>
-/// Intentionally empty for now (SCRUB A4 stands up the wiring only). The append data-layer/repository
-/// and the audit consumers land in SCRUB A5, registered here and in the host respectively. There is no
-/// validators or outbox usage — Audit is consumer-only and validates no ViewModels.
-/// </remarks>
 public static class AuditCoreServiceCollectionExtensions
 {
     public static IServiceCollection AddAuditCore(this IServiceCollection services)
     {
+        services.AddScoped<IAuditRepository, AuditRepository>();
+        services.AddScoped<IAuditDataLayer, AuditDataLayer>();
+        services.AddScoped<IAuditBusiness, AuditBusiness>();
+        services.AddScoped<IAuditFacade, AuditFacade>();
+
         return services;
     }
 }

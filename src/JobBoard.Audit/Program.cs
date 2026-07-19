@@ -1,4 +1,6 @@
+using JobBoard.Audit.Consumers;
 using JobBoard.Audit.Core.Data;
+using JobBoard.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,11 +17,16 @@ builder.AddNpgsqlDbContext<AuditDbContext>("auditdb");
 builder.AddAzureServiceBusClient("servicebus");
 
 // Composition: the .Core stack + the shared persistence/messaging spine. The receive-side processor
-// host comes from AddSharedMessaging; the audit consumers that subscribe to every business event are
-// added in SCRUB A5 (AddIntegrationEventConsumer, one per audit-* subscription declared in the AppHost).
+// host comes from AddSharedMessaging; then one generic AuditConsumer per business event records it to
+// auditdb. The subscription strings MUST match the AppHost's audit-* subscriptions exactly (they share
+// one Service Bus namespace).
 builder.Services.AddAuditCore();
 builder.Services.AddSharedPersistence<AuditDbContext>();
 builder.Services.AddSharedMessaging<AuditDbContext>();
+builder.Services.AddIntegrationEventConsumer<JobPosted, AuditConsumer<JobPosted>>("audit-jobposted");
+builder.Services.AddIntegrationEventConsumer<JobClosed, AuditConsumer<JobClosed>>("audit-jobclosed");
+builder.Services.AddIntegrationEventConsumer<ApplicationSubmitted, AuditConsumer<ApplicationSubmitted>>("audit-submitted");
+builder.Services.AddIntegrationEventConsumer<ApplicationStatusChanged, AuditConsumer<ApplicationStatusChanged>>("audit-statuschanged");
 
 var app = builder.Build();
 
