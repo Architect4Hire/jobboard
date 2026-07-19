@@ -15,7 +15,8 @@ third-party outbox. The mechanism lives once in `JobBoard.Shared`; the event rec
   `IIntegrationEvent` (a `Guid Id`), named in the **past tense** (`JobClosed`, `ApplicationSubmitted`),
   carrying only the fields a consumer needs — IDs plus the minimum denormalized data to avoid a
   call-back. No behavior, no EF, no service's Domain types. Changing an existing event is a **contract
-  change** that affects every consumer; treat it as such.
+  change** that affects every consumer; treat it as such. Every event also carries a `CorrelationId`,
+  `CausationId`, and the acting identity for the audit trail — see `.claude/rules/audit.md` (ADR-0013).
 - **Publish through the outbox, atomically.** Business *builds* the event; the data layer writes it
   to the service's own `OutboxMessages` table via `IOutbox` **inside the same transaction** as the
   domain write (`ExecuteInTransactionAsync`). A write that commits without its outbox row — or an

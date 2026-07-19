@@ -20,6 +20,8 @@ ADRs are immutable once **Accepted**: to change a decision, add a new ADR that *
 | [0010](./0010-contracts-leaf-status-as-string.md)            | Contracts as a leaf library; status crosses as strings          | Accepted |
 | [0011](./0011-token-derived-identity-propagation.md)         | Token-derived identity propagation at the gateway               | Proposed |
 | [0012](./0012-cross-service-read-model-strategy.md)          | Cross-service read-model / query composition strategy           | Proposed |
+| [0013](./0013-correlation-causation-identifiers-on-events.md) | Correlation & causation identifiers on integration events       | Proposed |
+| [0014](./0014-audit-bounded-context-bus-fed-support-trail.md) | The Audit bounded context — a bus-fed support audit trail       | Proposed |
 
 ## Statuses
 
