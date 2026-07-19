@@ -28,6 +28,12 @@ builder.Services.AddIntegrationEventConsumer<JobClosed, AuditConsumer<JobClosed>
 builder.Services.AddIntegrationEventConsumer<ApplicationSubmitted, AuditConsumer<ApplicationSubmitted>>("audit-submitted");
 builder.Services.AddIntegrationEventConsumer<ApplicationStatusChanged, AuditConsumer<ApplicationStatusChanged>>("audit-statuschanged");
 
+// Read-only support-query surface (SCRUB A6): the AuditController and the shared exception handler that
+// shapes a bad query filter into the shared error response. Reached only via the gateway's auth-protected
+// /audit route — the service itself carries no auth (edge enforces it) and no mutation endpoints.
+builder.Services.AddSharedExceptionHandler();
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 // Development convenience: apply the Audit migrations to the freshly-provisioned auditdb container so
@@ -39,14 +45,17 @@ if (app.Environment.IsDevelopment())
     await db.Database.MigrateAsync();
 }
 
-// No public HTTP surface — Audit is consumer-only (the read-only support-query route is SCRUB A6), so
-// there are no controllers and no gateway route yet. Only the health/alive endpoints are mapped, so the
-// dashboard can track it. Deliberately no AddSharedExceptionHandler/UseExceptionHandler: that shapes HTTP
-// error responses, and there is no request pipeline here — a consumer failure surfaces to the processor
-// host, which leaves the message unsettled for redelivery. (AddSharedMessaging also wires the
-// OutboxDispatcher; it idles against an empty outbox since Audit publishes nothing — the receive-side
-// processor host is what this service needs.)
-app.MapDefaultEndpoints();
+// The only HTTP surface is the read-only support-query route (SCRUB A6) — Audit records via the bus and
+// exposes just this one read path; there are no mutation endpoints and no auth here (the gateway's
+// /audit route enforces auth at the edge). UseExceptionHandler shapes a bad query filter (a thrown
+// ValidationException) into the shared error response. (AddSharedMessaging also wires the OutboxDispatcher;
+// it idles against an empty outbox since Audit publishes nothing — the receive-side processor host and,
+// now, this query surface are what this service needs. A consumer failure still surfaces to the processor
+// host, which leaves the message unsettled for redelivery.)
+app.UseExceptionHandler();
+
+app.MapDefaultEndpoints();   // health/alive — drives the dashboard health state
+app.MapControllers();        // AuditController — the support-query surface
 
 app.Run();
 

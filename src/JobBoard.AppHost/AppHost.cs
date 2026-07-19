@@ -107,11 +107,11 @@ builder.AddProject<Projects.JobBoard_Notifications>("notifications")
     .WaitFor(notificationsDb)
     .WaitFor(serviceBus);
 
-// Audit: owns auditdb, the bus-fed support audit trail (ADR-0014). Consumer-only — it subscribes to
-// every business event (via the "audit-*" subscriptions declared above) and appends an immutable row.
-// No public HTTP surface yet, so the gateway does NOT reference it (the read-only support-query route is
-// SCRUB A6). Runs the shared Service Bus processor host, so it uses the bus.
-builder.AddProject<Projects.JobBoard_Audit>("audit")
+// Audit: owns auditdb, the bus-fed support audit trail (ADR-0014). Subscribes to every business event
+// (via the "audit-*" subscriptions declared above) and appends an immutable row, and exposes one
+// read-only support-query route (SCRUB A6) the gateway proxies. Runs the shared Service Bus processor
+// host, so it uses the bus.
+var audit = builder.AddProject<Projects.JobBoard_Audit>("audit")
     .WithReference(auditDb)
     .WithReference(serviceBus)
     .WaitFor(auditDb)
@@ -127,12 +127,14 @@ var gateway = builder.AddProject<Projects.JobBoard_Gateway>("gateway")
     .WithReference(applications)
     .WithReference(identity)
     .WithReference(profiles)
+    .WithReference(audit)
     .WithReference(serviceBus)
     .WithEnvironment("Jwt__SigningKey", jwtSigningKey)
     .WaitFor(jobs)
     .WaitFor(applications)
     .WaitFor(identity)
-    .WaitFor(profiles);
+    .WaitFor(profiles)
+    .WaitFor(audit);
 
 // The Angular app talks only to the gateway; Aspire injects the gateway base URL and the
 // port to serve on — nothing is hardcoded.

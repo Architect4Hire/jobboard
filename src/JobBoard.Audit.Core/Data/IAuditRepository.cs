@@ -12,4 +12,11 @@ public interface IAuditRepository : IRepository
 {
     /// <summary>Stages one <see cref="AuditEntry"/> for insert. The caller runs it inside a transaction.</summary>
     Task AddAsync(AuditEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the trail rows matching <paramref name="query"/> (each populated filter AND-combined),
+    /// ordered oldest-first so the caller reads a timeline. A read — no transaction, no tracking. Capped so
+    /// a broad filter can't return the whole trail.
+    /// </summary>
+    Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query, CancellationToken cancellationToken = default);
 }

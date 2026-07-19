@@ -1,3 +1,5 @@
+using FluentValidation;
+using JobBoard.Audit.Core;
 using JobBoard.Audit.Core.Business;
 using JobBoard.Audit.Core.Data;
 using JobBoard.Audit.Core.Facade;
@@ -5,9 +7,10 @@ using JobBoard.Audit.Core.Facade;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers the Audit.Core stack (facade → business → data → repository). The host's composition root
-/// calls this alongside the shared persistence/messaging spine. No validators (events aren't validated)
-/// and no outbox usage (Audit is consumer-only and publishes nothing) — only the append path.
+/// Registers the Audit.Core stack (facade → business → data → repository) plus the support-query filter
+/// validator. The host's composition root calls this alongside the shared persistence/messaging spine. No
+/// outbox usage (Audit is consumer-only and publishes nothing) — the write path only appends, the read path
+/// only queries.
 /// </summary>
 public static class AuditCoreServiceCollectionExtensions
 {
@@ -17,6 +20,9 @@ public static class AuditCoreServiceCollectionExtensions
         services.AddScoped<IAuditDataLayer, AuditDataLayer>();
         services.AddScoped<IAuditBusiness, AuditBusiness>();
         services.AddScoped<IAuditFacade, AuditFacade>();
+
+        // Validators (the support-query filter — SCRUB A6) — registered once from this assembly.
+        services.AddValidatorsFromAssemblyContaining<AuditCoreMarker>();
 
         return services;
     }

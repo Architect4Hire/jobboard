@@ -1,5 +1,7 @@
 using JobBoard.Audit.Core.Data;
 using JobBoard.Audit.Core.Managers.Mappers;
+using JobBoard.Audit.Core.Managers.Models.ServiceModels;
+using JobBoard.Audit.Core.Managers.Models.ViewModels;
 using JobBoard.Contracts;
 
 namespace JobBoard.Audit.Core.Business;
@@ -18,4 +20,12 @@ public sealed class AuditBusiness : IAuditBusiness
 
     public Task RecordAsync(IIntegrationEvent @event, CancellationToken cancellationToken = default) =>
         _dataLayer.AppendAsync(@event.ToAuditEntry(), @event.Id, cancellationToken);
+
+    public async Task<IReadOnlyList<AuditEntryServiceModel>> QueryAsync(
+        AuditQueryViewModel query,
+        CancellationToken cancellationToken = default)
+    {
+        var entries = await _dataLayer.QueryAsync(query.ToAuditQuery(), cancellationToken);
+        return entries.Select(entry => entry.ToServiceModel()).ToList();
+    }
 }

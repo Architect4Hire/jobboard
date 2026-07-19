@@ -14,4 +14,10 @@ public interface IAuditDataLayer
     /// writing no duplicate row.
     /// </summary>
     Task AppendAsync(AuditEntry entry, Guid messageId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the trail rows matching <paramref name="query"/> for the support-query surface (SCRUB A6).
+    /// A read — it composes no transaction and no outbox row, only the repository query.
+    /// </summary>
+    Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query, CancellationToken cancellationToken = default);
 }

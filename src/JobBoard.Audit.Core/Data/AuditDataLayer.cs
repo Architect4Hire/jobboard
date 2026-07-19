@@ -35,4 +35,10 @@ public sealed class AuditDataLayer : IAuditDataLayer
                 await _inbox.MarkProcessedAsync(messageId, token);
             },
             cancellationToken);
+
+    public Task<IReadOnlyList<AuditEntry>> QueryAsync(
+        AuditQuery query,
+        CancellationToken cancellationToken = default) =>
+        // A read: no transaction, no idempotency to compose — straight through to the repository.
+        _repository.QueryAsync(query, cancellationToken);
 }

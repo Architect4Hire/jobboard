@@ -14,10 +14,22 @@ public sealed class FakeAuditDataLayer : IAuditDataLayer
 
     public Guid? MessageId { get; private set; }
 
+    /// <summary>The query the read path passed down — asserted by the business read tests.</summary>
+    public AuditQuery? Queried { get; private set; }
+
+    /// <summary>Rows to return from <see cref="QueryAsync"/>; a test seeds these before querying.</summary>
+    public IReadOnlyList<AuditEntry> QueryResult { get; set; } = [];
+
     public Task AppendAsync(AuditEntry entry, Guid messageId, CancellationToken cancellationToken = default)
     {
         Appended = entry;
         MessageId = messageId;
         return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query, CancellationToken cancellationToken = default)
+    {
+        Queried = query;
+        return Task.FromResult(QueryResult);
     }
 }
