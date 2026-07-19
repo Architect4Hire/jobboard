@@ -3,6 +3,7 @@ using JobBoard.Shared.Caching;
 using JobBoard.Shared.Errors;
 using JobBoard.Shared.Messaging;
 using JobBoard.Shared.Persistence;
+using JobBoard.Shared.Requests;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -132,6 +133,19 @@ public static class SharedServiceCollectionExtensions
     {
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the scoped ambient <see cref="IRequestContext"/> (backed by <see cref="AmbientRequestContext"/>).
+    /// The host still activates the middleware that populates it with <c>app.UseSharedRequestContext()</c>.
+    /// The concrete type is registered so the middleware can populate it; <see cref="IRequestContext"/>
+    /// resolves to the same scoped instance for the read side (the publish path).
+    /// </summary>
+    public static IServiceCollection AddSharedRequestContext(this IServiceCollection services)
+    {
+        services.TryAddScoped<AmbientRequestContext>();
+        services.TryAddScoped<IRequestContext>(sp => sp.GetRequiredService<AmbientRequestContext>());
         return services;
     }
 }

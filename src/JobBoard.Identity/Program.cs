@@ -16,6 +16,10 @@ builder.AddNpgsqlDbContext<IdentityDbContext>("identitydb");
 builder.Services.AddIdentityCore(builder.Configuration);
 builder.Services.AddSharedExceptionHandler();
 
+// Ambient request context: reads the correlation thread the gateway projected (ADR-0015) so the audit
+// events this service will emit (SCRUB A7) can carry it. Populated per request by UseSharedRequestContext.
+builder.Services.AddSharedRequestContext();
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -34,6 +38,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+
+// Read the trusted edge headers into the scoped IRequestContext before any endpoint runs.
+app.UseSharedRequestContext();
 
 app.MapDefaultEndpoints();   // health/alive — drives the dashboard health state
 app.MapControllers();        // IdentityController — register/login

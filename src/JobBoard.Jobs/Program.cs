@@ -26,6 +26,11 @@ builder.Services.AddSharedMessaging<JobsDbContext>();
 builder.Services.AddSharedCaching();
 builder.Services.AddSharedExceptionHandler();
 
+// Ambient request context: the middleware below reads the correlation/actor thread the gateway
+// projected (ADR-0015) into a scoped IRequestContext. The publish path will stamp it onto events in
+// SCRUB A3; today it's populated but not yet consumed.
+builder.Services.AddSharedRequestContext();
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -44,6 +49,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+
+// Read the trusted edge headers into the scoped IRequestContext before any endpoint runs.
+app.UseSharedRequestContext();
 
 app.MapDefaultEndpoints();   // health/alive — drives the dashboard health state
 app.MapControllers();        // JobsController — list/get/post/close

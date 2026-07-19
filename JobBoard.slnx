@@ -23,5 +23,6 @@
     <Project Path="tests/JobBoard.Identity.Tests/JobBoard.Identity.Tests.csproj" />
     <Project Path="tests/JobBoard.Profiles.Tests/JobBoard.Profiles.Tests.csproj" />
     <Project Path="tests/JobBoard.Notifications.Tests/JobBoard.Notifications.Tests.csproj" />
+    <Project Path="tests/JobBoard.Gateway.Tests/JobBoard.Gateway.Tests.csproj" />
   </Folder>
 </Solution>

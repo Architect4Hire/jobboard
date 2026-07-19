@@ -1,6 +1,8 @@
 using System.Text;
+using JobBoard.Gateway;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,9 @@ var signingKey = jwt["SigningKey"] ?? throw new InvalidOperationException("Jwt:S
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Keep the token's claim types as issued ("sub", "role") instead of remapping them to the long
+        // legacy ClaimTypes URIs, so the identity-projection transform reads the same names Identity mints.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -39,7 +44,30 @@ builder.Services.AddAuthorization(options =>
 // resource ("http://jobs") through discovery instead of a literal DNS lookup.
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
-    .AddServiceDiscoveryDestinationResolver();
+    .AddServiceDiscoveryDestinationResolver()
+    // Edge cross-cutting (ADR-0013/0015): mint the correlation thread and project the validated identity
+    // inward as trusted headers, stripping client-supplied copies so neither can be spoofed. Runs after
+    // UseAuthentication, so HttpContext.User is the validated principal (or anonymous on public routes).
+    .AddTransforms(context =>
+    {
+        context.AddRequestTransform(transformContext =>
+        {
+            var correlationId = EdgeIdentityHeaders.ApplyRequest(
+                transformContext.HttpContext.User, transformContext.ProxyRequest);
+            transformContext.HttpContext.Items[EdgeIdentityHeaders.CorrelationItemKey] = correlationId;
+            return ValueTask.CompletedTask;
+        });
+
+        context.AddResponseTransform(transformContext =>
+        {
+            if (transformContext.HttpContext.Items[EdgeIdentityHeaders.CorrelationItemKey] is Guid correlationId)
+            {
+                EdgeIdentityHeaders.ApplyResponse(transformContext.HttpContext.Response, correlationId);
+            }
+
+            return ValueTask.CompletedTask;
+        });
+    });
 
 var app = builder.Build();
 
