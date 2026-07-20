@@ -23,6 +23,8 @@ builder.Services.AddSharedPersistence<ApplicationsDbContext>();
 builder.Services.AddSharedMessaging<ApplicationsDbContext>();
 builder.Services.AddSharedExceptionHandler();
 builder.Services.AddIntegrationEventConsumer<JobClosed, JobClosedConsumer>("applications-jobclosed");
+builder.Services.AddIntegrationEventConsumer<JobPosted, JobPostedConsumer>("applications-jobposted");
+builder.Services.AddIntegrationEventConsumer<EmployerProfileChanged, EmployerProfileChangedConsumer>("applications-employerprofilechanged");
 
 // Ambient request context: the middleware below reads the correlation/actor thread the gateway
 // projected (ADR-0015) into a scoped IRequestContext. The publish path will stamp it onto events in

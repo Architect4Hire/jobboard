@@ -49,4 +49,21 @@ public interface IApplicationDataLayer
         ApplicationStatus target,
         Func<Application, ApplicationStatusChanged> buildEvent,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The <c>JobPosted</c> consumer's atomic unit: no-ops if <paramref name="messageId"/> is already in the
+    /// inbox; otherwise upserts the local <c>JobReference</c> projection and records the message. A
+    /// redelivery finds the inbox row and does nothing.
+    /// </summary>
+    Task UpsertJobReferenceAsync(Guid jobId, Guid messageId, string title, Guid employerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The <c>EmployerProfileChanged</c> consumer's atomic unit: no-ops if <paramref name="messageId"/> is
+    /// already in the inbox; otherwise upserts the local <c>EmployerReference</c> projection and records the
+    /// message. A redelivery finds the inbox row and does nothing.
+    /// </summary>
+    Task UpsertEmployerReferenceAsync(Guid employerId, Guid messageId, string companyName, CancellationToken cancellationToken = default);
+
+    /// <summary>A candidate's applications, newest first, enriched with job title and employer name. Reads pass straight through.</summary>
+    Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(Guid candidateId, CancellationToken cancellationToken = default);
 }

@@ -49,6 +49,17 @@ public sealed class EmployerProfileBusinessTests
         Assert.Equal(CorrelationId, updated.CorrelationId);
         Assert.Equal(CorrelationId, updated.CausationId);
         Assert.Equal(ActorId, updated.ActorId);
+
+        // ...and its state-transfer twin, carrying the company name itself, same thread, a distinct id.
+        var changed = dataLayer.ChangedEvent;
+        Assert.NotNull(changed);
+        Assert.NotEqual(Guid.Empty, changed!.Id);
+        Assert.NotEqual(updated.Id, changed.Id);
+        Assert.Equal(employerId, changed.EmployerId);
+        Assert.Equal("Globex", changed.CompanyName);
+        Assert.Equal(CorrelationId, changed.CorrelationId);
+        Assert.Equal(CorrelationId, changed.CausationId);
+        Assert.Equal(ActorId, changed.ActorId);
     }
 
     [Fact]

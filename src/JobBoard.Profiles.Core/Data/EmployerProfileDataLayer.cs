@@ -22,16 +22,21 @@ public sealed class EmployerProfileDataLayer : IEmployerProfileDataLayer
     public Task<EmployerProfile?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         _repository.GetAsync(id, cancellationToken);
 
-    public async Task<EmployerProfile> UpsertAsync(EmployerProfile incoming, ProfileUpdated updated, CancellationToken cancellationToken = default)
+    public async Task<EmployerProfile> UpsertAsync(
+        EmployerProfile incoming,
+        ProfileUpdated updated,
+        EmployerProfileChanged changed,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            // The upsert and the ProfileUpdated outbox row commit in one transaction.
+            // The upsert and both outbox rows commit in one transaction.
             return await _repository.ExecuteInTransactionAsync(
                 async token =>
                 {
                     var saved = await _repository.UpsertAsync(incoming, token);
                     await _outbox.EnqueueAsync(updated, token);
+                    await _outbox.EnqueueAsync(changed, token);
                     return saved;
                 },
                 cancellationToken);

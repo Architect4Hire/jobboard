@@ -139,4 +139,47 @@ public sealed class ApplicationDataLayer : IApplicationDataLayer
                 return closedIds.Count;
             },
             cancellationToken);
+
+    public Task UpsertJobReferenceAsync(
+        Guid jobId,
+        Guid messageId,
+        string title,
+        Guid employerId,
+        CancellationToken cancellationToken = default) =>
+        _repository.ExecuteInTransactionAsync(
+            async token =>
+            {
+                if (await _inbox.HasProcessedAsync(messageId, token))
+                {
+                    return;
+                }
+
+                await _repository.UpsertJobReferenceAsync(jobId, title, employerId, token);
+                await _inbox.MarkProcessedAsync(messageId, token);
+            },
+            cancellationToken);
+
+    public Task UpsertEmployerReferenceAsync(
+        Guid employerId,
+        Guid messageId,
+        string companyName,
+        CancellationToken cancellationToken = default) =>
+        _repository.ExecuteInTransactionAsync(
+            async token =>
+            {
+                if (await _inbox.HasProcessedAsync(messageId, token))
+                {
+                    return;
+                }
+
+                await _repository.UpsertEmployerReferenceAsync(employerId, companyName, token);
+                await _inbox.MarkProcessedAsync(messageId, token);
+            },
+            cancellationToken);
+
+    // Reads pass straight through — no transaction.
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(
+        Guid candidateId,
+        CancellationToken cancellationToken = default) =>
+        _repository.ListMineAsync(candidateId, cancellationToken);
 }

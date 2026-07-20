@@ -9,7 +9,9 @@ namespace JobBoard.Profiles.Core.Managers.Mappers;
 /// <summary>
 /// The mapping seams the employer business layer owns: <b>ViewModel → Domain</b> (upsert, taking the owner
 /// id from the route), <b>Domain → ServiceModel</b> (every response), and <b>Domain → integration event</b>
-/// (the <see cref="ProfileUpdated"/> audit fact — ids + type + timestamp only, no company field values).
+/// — the <see cref="ProfileUpdated"/> audit fact (ids + type + timestamp only, no company field values) and
+/// the <see cref="EmployerProfileChanged"/> state-transfer twin (carries <c>CompanyName</c> itself, for
+/// Applications' local projection — ADR-0012).
 /// </summary>
 public static class EmployerProfileMappers
 {
@@ -20,6 +22,20 @@ public static class EmployerProfileMappers
     /// </summary>
     public static ProfileUpdated ToProfileUpdated(this EmployerProfile profile, AuditThread thread) =>
         new(Guid.NewGuid(), profile.Id, "Employer", profile.UpdatedOnUtc)
+        {
+            CorrelationId = thread.CorrelationId,
+            CausationId = thread.CausationId,
+            ActorId = thread.ActorId,
+        };
+
+    /// <summary>
+    /// Builds the <see cref="EmployerProfileChanged"/> state-transfer fact for an employer profile that has
+    /// just been written, stamping a fresh event id and the same audit <paramref name="thread"/> as the
+    /// sibling <see cref="ProfileUpdated"/> fact from the same write. Unlike that fact, this one carries
+    /// <see cref="EmployerProfile.CompanyName"/> — it exists only so Applications can mirror it locally.
+    /// </summary>
+    public static EmployerProfileChanged ToEmployerProfileChanged(this EmployerProfile profile, AuditThread thread) =>
+        new(Guid.NewGuid(), profile.Id, profile.CompanyName, profile.UpdatedOnUtc)
         {
             CorrelationId = thread.CorrelationId,
             CausationId = thread.CausationId,

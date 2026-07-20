@@ -200,6 +200,70 @@ public sealed class ApplicationDataLayerTests
         Assert.Empty(inbox.Marked);
     }
 
+    [Fact]
+    public async Task UpsertJobReferenceAsync_WhenNotAlreadyProcessed_UpsertsThenMarksInbox()
+    {
+        var repository = new FakeApplicationRepository();
+        var inbox = new FakeInbox { AlreadyProcessed = false };
+        var dataLayer = new ApplicationDataLayer(repository, new FakeOutbox(), inbox);
+
+        var jobId = Guid.NewGuid();
+        var employerId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+
+        await dataLayer.UpsertJobReferenceAsync(jobId, messageId, "Senior Engineer", employerId);
+
+        Assert.Equal(["tx:begin", "upsertJobReference", "tx:commit"], repository.Calls);
+        var upserted = Assert.Single(repository.UpsertedJobReferences);
+        Assert.Equal((jobId, "Senior Engineer", employerId), upserted);
+        Assert.Equal(messageId, Assert.Single(inbox.Marked));
+    }
+
+    [Fact]
+    public async Task UpsertJobReferenceAsync_WhenAlreadyProcessed_IsANoOp()
+    {
+        var repository = new FakeApplicationRepository();
+        var inbox = new FakeInbox { AlreadyProcessed = true };
+        var dataLayer = new ApplicationDataLayer(repository, new FakeOutbox(), inbox);
+
+        await dataLayer.UpsertJobReferenceAsync(Guid.NewGuid(), Guid.NewGuid(), "Ignored", Guid.NewGuid());
+
+        Assert.Equal(["tx:begin", "tx:commit"], repository.Calls);
+        Assert.Empty(repository.UpsertedJobReferences);
+        Assert.Empty(inbox.Marked);
+    }
+
+    [Fact]
+    public async Task UpsertEmployerReferenceAsync_WhenNotAlreadyProcessed_UpsertsThenMarksInbox()
+    {
+        var repository = new FakeApplicationRepository();
+        var inbox = new FakeInbox { AlreadyProcessed = false };
+        var dataLayer = new ApplicationDataLayer(repository, new FakeOutbox(), inbox);
+
+        var employerId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+
+        await dataLayer.UpsertEmployerReferenceAsync(employerId, messageId, "Globex Corp");
+
+        Assert.Equal(["tx:begin", "upsertEmployerReference", "tx:commit"], repository.Calls);
+        Assert.Equal((employerId, "Globex Corp"), Assert.Single(repository.UpsertedEmployerReferences));
+        Assert.Equal(messageId, Assert.Single(inbox.Marked));
+    }
+
+    [Fact]
+    public async Task UpsertEmployerReferenceAsync_WhenAlreadyProcessed_IsANoOp()
+    {
+        var repository = new FakeApplicationRepository();
+        var inbox = new FakeInbox { AlreadyProcessed = true };
+        var dataLayer = new ApplicationDataLayer(repository, new FakeOutbox(), inbox);
+
+        await dataLayer.UpsertEmployerReferenceAsync(Guid.NewGuid(), Guid.NewGuid(), "Ignored");
+
+        Assert.Equal(["tx:begin", "tx:commit"], repository.Calls);
+        Assert.Empty(repository.UpsertedEmployerReferences);
+        Assert.Empty(inbox.Marked);
+    }
+
     // ---- Atomicity (real SQLite): the domain change and the outbox row are one unit ----
 
     [Fact]

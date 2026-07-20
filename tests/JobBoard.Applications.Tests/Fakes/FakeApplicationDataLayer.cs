@@ -45,6 +45,14 @@ public sealed class FakeApplicationDataLayer : IApplicationDataLayer
 
     public int CloseResult { get; set; }
 
+    public (Guid JobId, Guid MessageId, string Title, Guid EmployerId)? UpsertedJobReference { get; private set; }
+
+    public (Guid EmployerId, Guid MessageId, string CompanyName)? UpsertedEmployerReference { get; private set; }
+
+    public IReadOnlyList<ApplicationHistoryServiceModel> MineResult { get; init; } = [];
+
+    public Guid? MineCandidateId { get; private set; }
+
     public Task<IReadOnlyList<ApplicationSummaryServiceModel>> ListByCandidateAsync(Guid candidateId, CancellationToken cancellationToken = default) =>
         Task.FromResult(ListResult);
 
@@ -84,5 +92,23 @@ public sealed class FakeApplicationDataLayer : IApplicationDataLayer
         CloseTarget = target;
         CloseBuildEvent = buildEvent;
         return Task.FromResult(CloseResult);
+    }
+
+    public Task UpsertJobReferenceAsync(Guid jobId, Guid messageId, string title, Guid employerId, CancellationToken cancellationToken = default)
+    {
+        UpsertedJobReference = (jobId, messageId, title, employerId);
+        return Task.CompletedTask;
+    }
+
+    public Task UpsertEmployerReferenceAsync(Guid employerId, Guid messageId, string companyName, CancellationToken cancellationToken = default)
+    {
+        UpsertedEmployerReference = (employerId, messageId, companyName);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(Guid candidateId, CancellationToken cancellationToken = default)
+    {
+        MineCandidateId = candidateId;
+        return Task.FromResult(MineResult);
     }
 }

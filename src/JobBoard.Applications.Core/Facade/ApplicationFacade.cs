@@ -57,4 +57,13 @@ public sealed class ApplicationFacade : IApplicationFacade
 
     public Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default) =>
         _business.HandleJobClosedAsync(@event, cancellationToken);
+
+    public Task HandleJobPostedAsync(JobPosted @event, CancellationToken cancellationToken = default) =>
+        _business.HandleJobPostedAsync(@event, cancellationToken);
+
+    public Task HandleEmployerProfileChangedAsync(EmployerProfileChanged @event, CancellationToken cancellationToken = default) =>
+        _business.HandleEmployerProfileChangedAsync(@event, cancellationToken);
+
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(CancellationToken cancellationToken = default) =>
+        _business.ListMineAsync(cancellationToken);
 }

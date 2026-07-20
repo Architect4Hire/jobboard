@@ -16,13 +16,20 @@ public sealed class FakeEmployerProfileDataLayer : IEmployerProfileDataLayer
 
     public ProfileUpdated? UpdatedEvent { get; private set; }
 
+    public EmployerProfileChanged? ChangedEvent { get; private set; }
+
     public Task<EmployerProfile?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(GetResult);
 
-    public Task<EmployerProfile> UpsertAsync(EmployerProfile incoming, ProfileUpdated updated, CancellationToken cancellationToken = default)
+    public Task<EmployerProfile> UpsertAsync(
+        EmployerProfile incoming,
+        ProfileUpdated updated,
+        EmployerProfileChanged changed,
+        CancellationToken cancellationToken = default)
     {
         Upserted = incoming;
         UpdatedEvent = updated;
+        ChangedEvent = changed;
         return Task.FromResult(incoming);
     }
 }

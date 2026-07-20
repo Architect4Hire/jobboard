@@ -3,18 +3,20 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { ApplicationService } from '../../core/api/application.service';
-import { Session } from '../../core/auth/session';
 import {
   Application,
+  ApplicationHistoryItem,
   ApplicationStatus,
-  ApplicationSummary,
 } from '../../core/models/application.model';
 import { ApplicationList } from './application-list';
 
-const SUMMARIES: readonly ApplicationSummary[] = [
+const HISTORY: readonly ApplicationHistoryItem[] = [
   {
     id: 'a1',
     jobId: 'j1',
+    jobTitle: 'Senior Engineer',
+    employerId: 'e1',
+    employerName: 'Acme Co',
     status: ApplicationStatus.Submitted,
     submittedOnUtc: '2026-01-01T00:00:00Z',
     statusChangedOnUtc: '2026-01-01T00:00:00Z',
@@ -32,30 +34,28 @@ const WITHDRAWN: Application = {
 };
 
 describe('ApplicationList', () => {
-  let listByCandidate: ReturnType<typeof vi.fn>;
+  let listMine: ReturnType<typeof vi.fn>;
   let withdraw: ReturnType<typeof vi.fn>;
 
   function setup() {
-    listByCandidate = vi.fn().mockReturnValue(of(SUMMARIES));
+    listMine = vi.fn().mockReturnValue(of(HISTORY));
     withdraw = vi.fn().mockReturnValue(of(WITHDRAWN));
     TestBed.configureTestingModule({
       imports: [ApplicationList],
-      providers: [
-        provideRouter([]),
-        { provide: ApplicationService, useValue: { listByCandidate, withdraw } },
-        { provide: Session, useValue: { userId: (() => 'cand-1') as Session['userId'] } },
-      ],
+      providers: [provideRouter([]), { provide: ApplicationService, useValue: { listMine, withdraw } }],
     });
     const fixture = TestBed.createComponent(ApplicationList);
     fixture.detectChanges();
     return fixture;
   }
 
-  it("lists the session candidate's applications with a status badge", () => {
+  it("lists the caller's own applications with job title, employer name, and a status badge", () => {
     const fixture = setup();
-    expect(listByCandidate).toHaveBeenCalledWith('cand-1');
-    const badge = (fixture.nativeElement as HTMLElement).querySelector('.badge');
-    expect(badge?.textContent?.trim()).toBe('Submitted');
+    expect(listMine).toHaveBeenCalled();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.row__job')?.textContent?.trim()).toBe('Senior Engineer');
+    expect(element.querySelector('.row__employer')?.textContent?.trim()).toBe('Acme Co');
+    expect(element.querySelector('.badge')?.textContent?.trim()).toBe('Submitted');
   });
 
   it('withdraws an application and updates its status in place', () => {
@@ -71,15 +71,11 @@ describe('ApplicationList', () => {
   });
 
   it('shows an error message when the list fetch fails', () => {
-    listByCandidate = vi.fn().mockReturnValue(throwError(() => new Error('down')));
+    listMine = vi.fn().mockReturnValue(throwError(() => new Error('down')));
     withdraw = vi.fn();
     TestBed.configureTestingModule({
       imports: [ApplicationList],
-      providers: [
-        provideRouter([]),
-        { provide: ApplicationService, useValue: { listByCandidate, withdraw } },
-        { provide: Session, useValue: { userId: (() => 'cand-1') as Session['userId'] } },
-      ],
+      providers: [provideRouter([]), { provide: ApplicationService, useValue: { listMine, withdraw } }],
     });
     const fixture = TestBed.createComponent(ApplicationList);
     fixture.detectChanges();

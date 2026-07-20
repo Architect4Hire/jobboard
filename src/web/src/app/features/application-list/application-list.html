@@ -16,7 +16,8 @@
         @for (application of applications; track application.id) {
           <li class="row surface">
             <div class="row__main">
-              <a class="row__job" [routerLink]="['/jobs', application.jobId]">View posting →</a>
+              <a class="row__job" [routerLink]="['/jobs', application.jobId]">{{ application.jobTitle }}</a>
+              <span class="row__employer">{{ application.employerName }}</span>
               <span class="row__date">
                 Applied {{ application.submittedOnUtc | date: 'mediumDate' }}
               </span>

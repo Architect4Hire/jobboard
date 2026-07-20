@@ -131,4 +131,22 @@ public sealed class ApplicationBusiness : IApplicationBusiness
             application => application.ToStatusChanged(application.Status, ApplicationStatus.Rejected, thread),
             cancellationToken);
     }
+
+    public Task HandleJobPostedAsync(JobPosted @event, CancellationToken cancellationToken = default) =>
+        _dataLayer.UpsertJobReferenceAsync(@event.JobId, @event.Id, @event.Title, @event.EmployerId, cancellationToken);
+
+    public Task HandleEmployerProfileChangedAsync(EmployerProfileChanged @event, CancellationToken cancellationToken = default) =>
+        _dataLayer.UpsertEmployerReferenceAsync(@event.EmployerId, @event.Id, @event.CompanyName, cancellationToken);
+
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(CancellationToken cancellationToken = default)
+    {
+        // The gateway's "authenticated" policy already guards every /applications/** route (gateway.md), so
+        // a missing actor here means the request never traversed the gateway — defense in depth, not the
+        // real enforcement.
+        var candidateId = _requestContext.ActorId
+            ?? throw new DomainException(
+                "application.unauthenticated", "No authenticated candidate on the request.", StatusCodes.Status401Unauthorized);
+
+        return _dataLayer.ListMineAsync(candidateId, cancellationToken);
+    }
 }

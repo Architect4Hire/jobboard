@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using JobBoard.Applications.Core.Data;
 using JobBoard.Applications.Core.Managers.Models.Domain;
 using JobBoard.Applications.Core.Managers.Models.ServiceModels;
+using JobBoard.Shared.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -144,5 +145,62 @@ public sealed class ApplicationsEndpointTests
             $"/applications?candidateId={candidateId}");
 
         Assert.Equal(2, results!.Count);
+    }
+
+    [Fact]
+    public async Task Mine_ReturnsOnlyTheAuthenticatedCandidatesApplications_EnrichedWithJobAndEmployer()
+    {
+        using var factory = new ApplicationsApiFactory();
+        var candidateId = Guid.NewGuid();
+
+        // Seed reference data as the two consumers would, then an application for this candidate and one
+        // for a different candidate — the endpoint must only ever return the caller's own rows.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationsDbContext>();
+            var jobId = Guid.NewGuid();
+            var employerId = Guid.NewGuid();
+            db.JobReferences.Add(new JobReference { JobId = jobId, Title = "Senior Engineer", EmployerId = employerId });
+            db.EmployerReferences.Add(new EmployerReference { EmployerId = employerId, CompanyName = "Acme Co" });
+            db.Applications.Add(new Application
+            {
+                Id = Guid.NewGuid(),
+                CandidateId = candidateId,
+                JobId = jobId,
+                Status = ApplicationStatus.Submitted,
+                SubmittedOnUtc = DateTime.UtcNow,
+                StatusChangedOnUtc = DateTime.UtcNow,
+            });
+            db.Applications.Add(new Application
+            {
+                Id = Guid.NewGuid(),
+                CandidateId = Guid.NewGuid(), // a different candidate
+                JobId = jobId,
+                Status = ApplicationStatus.Submitted,
+                SubmittedOnUtc = DateTime.UtcNow,
+                StatusChangedOnUtc = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(AuditHeaderNames.UserId, candidateId.ToString());
+
+        var results = await client.GetFromJsonAsync<List<ApplicationHistoryServiceModel>>("/applications/mine");
+
+        var result = Assert.Single(results!);
+        Assert.Equal("Senior Engineer", result.JobTitle);
+        Assert.Equal("Acme Co", result.EmployerName);
+    }
+
+    [Fact]
+    public async Task Mine_WithNoAuthenticatedCandidate_Returns401()
+    {
+        using var factory = new ApplicationsApiFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/applications/mine");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

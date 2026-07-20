@@ -28,4 +28,17 @@ public interface IApplicationBusiness
     /// an <c>ApplicationStatusChanged</c> per application. Idempotency is handled downstream (the inbox).
     /// </summary>
     Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default);
+
+    /// <summary>Entry point for the <c>JobPosted</c> consumer — mirrors title/employer into the local projection.</summary>
+    Task HandleJobPostedAsync(JobPosted @event, CancellationToken cancellationToken = default);
+
+    /// <summary>Entry point for the <c>EmployerProfileChanged</c> consumer — mirrors the company name into the local projection.</summary>
+    Task HandleEmployerProfileChangedAsync(EmployerProfileChanged @event, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The authenticated caller's own applications, enriched with job title and employer name (ADR-0012).
+    /// The candidate id comes from the ambient request context (the edge-projected actor), never a
+    /// client-supplied parameter.
+    /// </summary>
+    Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import {
   AdvanceApplicationStatusRequest,
   Application,
+  ApplicationHistoryItem,
   ApplicationSummary,
   SubmitApplicationRequest,
 } from '../models/application.model';
@@ -23,6 +24,15 @@ export class ApplicationService {
   listByCandidate(candidateId: string): Observable<readonly ApplicationSummary[]> {
     const params = new HttpParams().set('candidateId', candidateId);
     return this.http.get<readonly ApplicationSummary[]>(this.baseUrl, { params });
+  }
+
+  /**
+   * GET /applications/mine — the authenticated caller's own applications, enriched with job title and
+   * employer name. The candidate is derived server-side from the JWT (via the gateway's trusted headers),
+   * not passed as a parameter here.
+   */
+  listMine(): Observable<readonly ApplicationHistoryItem[]> {
+    return this.http.get<readonly ApplicationHistoryItem[]>(`${this.baseUrl}/mine`);
   }
 
   /** GET /applications/{id}. */

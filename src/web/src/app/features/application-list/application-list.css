@@ -56,6 +56,10 @@
 .row__job:hover {
   color: var(--cyan-400);
 }
+.row__employer {
+  color: var(--text-mid);
+  font-size: 0.85rem;
+}
 .row__date {
   color: var(--text-lo);
   font-size: 0.8rem;

@@ -138,6 +138,120 @@ public sealed class ApplicationRepositoryTests
     }
 
     [Fact]
+    public async Task UpsertJobReferenceAsync_InsertsThenUpdatesInPlace()
+    {
+        using var harness = new ApplicationsSqliteHarness();
+        var jobId = Guid.NewGuid();
+        var firstEmployer = Guid.NewGuid();
+        var secondEmployer = Guid.NewGuid();
+
+        await using (var context = harness.CreateContext())
+        {
+            var repository = new ApplicationRepository(context);
+            await repository.UpsertJobReferenceAsync(jobId, "First Title", firstEmployer);
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = harness.CreateContext())
+        {
+            var repository = new ApplicationRepository(context);
+            await repository.UpsertJobReferenceAsync(jobId, "Retitled", secondEmployer);
+            await context.SaveChangesAsync();
+        }
+
+        await using var assert = harness.CreateContext();
+        var reference = await assert.JobReferences.SingleAsync();
+        Assert.Equal("Retitled", reference.Title);
+        Assert.Equal(secondEmployer, reference.EmployerId);
+    }
+
+    [Fact]
+    public async Task UpsertEmployerReferenceAsync_InsertsThenUpdatesInPlace()
+    {
+        using var harness = new ApplicationsSqliteHarness();
+        var employerId = Guid.NewGuid();
+
+        await using (var context = harness.CreateContext())
+        {
+            var repository = new ApplicationRepository(context);
+            await repository.UpsertEmployerReferenceAsync(employerId, "Old Name Inc");
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = harness.CreateContext())
+        {
+            var repository = new ApplicationRepository(context);
+            await repository.UpsertEmployerReferenceAsync(employerId, "New Name LLC");
+            await context.SaveChangesAsync();
+        }
+
+        await using var assert = harness.CreateContext();
+        Assert.Equal("New Name LLC", (await assert.EmployerReferences.SingleAsync()).CompanyName);
+    }
+
+    [Fact]
+    public async Task ListMineAsync_ReturnsOnlyThatCandidate_EnrichedWithJobTitleAndEmployerName_NewestFirst()
+    {
+        using var harness = new ApplicationsSqliteHarness();
+        var candidateId = Guid.NewGuid();
+        var employerId = Guid.NewGuid();
+
+        var older = TestData.Application(candidateId: candidateId, status: ApplicationStatus.Reviewed);
+        older.SubmittedOnUtc = DateTime.UtcNow.AddHours(-1);
+        var newer = TestData.Application(candidateId: candidateId, status: ApplicationStatus.Submitted);
+        newer.SubmittedOnUtc = DateTime.UtcNow;
+
+        await using (var seed = harness.CreateContext())
+        {
+            seed.Applications.Add(older);
+            seed.Applications.Add(newer);
+            seed.Applications.Add(TestData.Application()); // a different candidate
+            seed.JobReferences.Add(new JobReference { JobId = older.JobId, Title = "Older Role", EmployerId = employerId });
+            seed.JobReferences.Add(new JobReference { JobId = newer.JobId, Title = "Newer Role", EmployerId = employerId });
+            seed.EmployerReferences.Add(new EmployerReference { EmployerId = employerId, CompanyName = "Acme Co" });
+            await seed.SaveChangesAsync();
+        }
+
+        await using var context = harness.CreateContext();
+        var repository = new ApplicationRepository(context);
+
+        var results = await repository.ListMineAsync(candidateId);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(newer.Id, results[0].Id);   // newest first
+        Assert.Equal("Newer Role", results[0].JobTitle);
+        Assert.Equal("Acme Co", results[0].EmployerName);
+        Assert.Equal(older.Id, results[1].Id);
+        Assert.Equal("Older Role", results[1].JobTitle);
+        Assert.Equal("Acme Co", results[1].EmployerName);
+    }
+
+    [Fact]
+    public async Task ListMineAsync_WhenReferenceDataHasNotArrivedYet_FallsBackToAPlaceholder_RatherThanDroppingTheRow()
+    {
+        using var harness = new ApplicationsSqliteHarness();
+        var candidateId = Guid.NewGuid();
+        var application = TestData.Application(candidateId: candidateId);
+
+        await using (var seed = harness.CreateContext())
+        {
+            // No JobReference/EmployerReference seeded — JobPosted/EmployerProfileChanged just hasn't
+            // arrived yet. The row must still show up, not disappear.
+            seed.Applications.Add(application);
+            await seed.SaveChangesAsync();
+        }
+
+        await using var context = harness.CreateContext();
+        var repository = new ApplicationRepository(context);
+
+        var results = await repository.ListMineAsync(candidateId);
+
+        var result = Assert.Single(results);
+        Assert.Equal("Unknown job", result.JobTitle);
+        Assert.Equal("Unknown employer", result.EmployerName);
+    }
+
+    [Fact]
     public async Task CloseActiveByJobAsync_ClosesActive_LeavesTerminalAndOtherJobs()
     {
         using var harness = new ApplicationsSqliteHarness();

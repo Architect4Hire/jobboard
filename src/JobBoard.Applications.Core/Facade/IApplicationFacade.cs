@@ -23,4 +23,13 @@ public interface IApplicationFacade
 
     /// <summary>Entry point for the <c>JobClosed</c> consumer — an integration event, not a view model, so no validation.</summary>
     Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default);
+
+    /// <summary>Entry point for the <c>JobPosted</c> consumer — an integration event, not a view model, so no validation.</summary>
+    Task HandleJobPostedAsync(JobPosted @event, CancellationToken cancellationToken = default);
+
+    /// <summary>Entry point for the <c>EmployerProfileChanged</c> consumer — an integration event, not a view model, so no validation.</summary>
+    Task HandleEmployerProfileChangedAsync(EmployerProfileChanged @event, CancellationToken cancellationToken = default);
+
+    /// <summary>The authenticated caller's own applications, enriched with job title and employer name.</summary>
+    Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(CancellationToken cancellationToken = default);
 }

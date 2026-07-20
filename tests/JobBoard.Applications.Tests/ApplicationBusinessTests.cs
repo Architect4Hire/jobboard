@@ -1,5 +1,6 @@
 using JobBoard.Applications.Core.Business;
 using JobBoard.Applications.Core.Managers.Models.Domain;
+using JobBoard.Applications.Core.Managers.Models.ServiceModels;
 using JobBoard.Applications.Tests.Fakes;
 using JobBoard.Contracts;
 using JobBoard.Shared.Errors;
@@ -236,6 +237,64 @@ public sealed class ApplicationBusinessTests
         Assert.Equal(incomingCorrelation, built.CorrelationId);
         Assert.Equal(jobClosed.Id, built.CausationId);
         Assert.Equal(incomingActor, built.ActorId);
+    }
+
+    [Fact]
+    public async Task HandleJobPostedAsync_PassesEventFieldsToTheDataLayer()
+    {
+        var dataLayer = new FakeApplicationDataLayer();
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
+        var jobId = Guid.NewGuid();
+        var employerId = Guid.NewGuid();
+
+        var jobPosted = new JobPosted(Guid.NewGuid(), jobId, employerId, "Senior Engineer", "Remote", DateTime.UtcNow);
+
+        await business.HandleJobPostedAsync(jobPosted);
+
+        Assert.Equal((jobId, jobPosted.Id, "Senior Engineer", employerId), dataLayer.UpsertedJobReference);
+    }
+
+    [Fact]
+    public async Task HandleEmployerProfileChangedAsync_PassesEventFieldsToTheDataLayer()
+    {
+        var dataLayer = new FakeApplicationDataLayer();
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
+        var employerId = Guid.NewGuid();
+
+        var changed = new EmployerProfileChanged(Guid.NewGuid(), employerId, "Globex Corp", DateTime.UtcNow);
+
+        await business.HandleEmployerProfileChangedAsync(changed);
+
+        Assert.Equal((employerId, changed.Id, "Globex Corp"), dataLayer.UpsertedEmployerReference);
+    }
+
+    [Fact]
+    public async Task ListMineAsync_UsesTheAmbientActorId_NeverAClientSuppliedOne()
+    {
+        var expected = new List<ApplicationHistoryServiceModel>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), "Title", Guid.NewGuid(), "Employer", ApplicationStatus.Submitted, DateTime.UtcNow, DateTime.UtcNow),
+        };
+        var dataLayer = new FakeApplicationDataLayer { MineResult = expected };
+        var business = new ApplicationBusiness(dataLayer, RequestContext);
+
+        var result = await business.ListMineAsync();
+
+        Assert.Equal(ActorId, dataLayer.MineCandidateId);
+        Assert.Same(expected, result);
+    }
+
+    [Fact]
+    public async Task ListMineAsync_WithNoAuthenticatedActor_Throws401()
+    {
+        var anonymous = new AmbientRequestContext();
+        anonymous.Populate(Guid.NewGuid(), null, null);
+        var business = new ApplicationBusiness(new FakeApplicationDataLayer(), anonymous);
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() => business.ListMineAsync());
+
+        Assert.Equal("application.unauthenticated", ex.Code);
+        Assert.Equal(StatusCodes.Status401Unauthorized, ex.StatusCode);
     }
 
     [Fact]

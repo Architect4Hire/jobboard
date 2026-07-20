@@ -46,4 +46,15 @@ public sealed class FakeApplicationBusiness : IApplicationBusiness
 
     public Task HandleJobClosedAsync(JobClosed @event, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public IReadOnlyList<ApplicationHistoryServiceModel> MineResult { get; init; } = [];
+
+    public Task HandleJobPostedAsync(JobPosted @event, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task HandleEmployerProfileChangedAsync(EmployerProfileChanged @event, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(MineResult);
 }

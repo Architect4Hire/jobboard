@@ -15,10 +15,10 @@ public sealed class EmployerProfileDataLayerTests
         new(new EmployerProfileRepository(context), outbox ?? new Outbox(context));
 
     private static async Task UpsertAsync(EmployerProfileDataLayer dataLayer, EmployerProfile profile) =>
-        await dataLayer.UpsertAsync(profile, profile.ToProfileUpdated(default));
+        await dataLayer.UpsertAsync(profile, profile.ToProfileUpdated(default), profile.ToEmployerProfileChanged(default));
 
     [Fact]
-    public async Task UpsertAsync_CreatesThenUpdates_ThroughTheTransaction_AndEnqueuesProfileUpdated()
+    public async Task UpsertAsync_CreatesThenUpdates_ThroughTheTransaction_AndEnqueuesBothFacts()
     {
         using var harness = new ProfilesSqliteHarness();
         var id = Guid.NewGuid();
@@ -37,9 +37,12 @@ public sealed class EmployerProfileDataLayerTests
         var profile = Assert.Single(await assert.EmployerProfiles.ToListAsync());
         Assert.Equal("Second", profile.CompanyName);
 
+        // Two upserts, two facts each: the PII-free ProfileUpdated audit fact and its EmployerProfileChanged
+        // state-transfer twin.
         var rows = await assert.OutboxMessages.ToListAsync();
-        Assert.Equal(2, rows.Count);
-        Assert.All(rows, r => Assert.Equal(nameof(ProfileUpdated), r.Type));
+        Assert.Equal(4, rows.Count);
+        Assert.Equal(2, rows.Count(r => r.Type == nameof(ProfileUpdated)));
+        Assert.Equal(2, rows.Count(r => r.Type == nameof(EmployerProfileChanged)));
     }
 
     [Fact]
@@ -52,7 +55,8 @@ public sealed class EmployerProfileDataLayerTests
         {
             var dataLayer = CreateDataLayer(context, new FakeOutbox { ThrowOnEnqueue = true });
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => dataLayer.UpsertAsync(profile, profile.ToProfileUpdated(default)));
+                () => dataLayer.UpsertAsync(
+                    profile, profile.ToProfileUpdated(default), profile.ToEmployerProfileChanged(default)));
         }
 
         await using var assert = harness.CreateContext();

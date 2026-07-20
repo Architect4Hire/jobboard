@@ -28,8 +28,11 @@ public sealed class EmployerProfileBusiness : IEmployerProfileBusiness
     {
         var incoming = viewModel.ToEntity(employerId);
         // The employer edits their own company profile — the actor is the authenticated caller (ADR-0013).
-        var updated = incoming.ToProfileUpdated(_requestContext.RootThread());
-        var saved = await _dataLayer.UpsertAsync(incoming, updated, cancellationToken);
+        var thread = _requestContext.RootThread();
+        var updated = incoming.ToProfileUpdated(thread);
+        // Same write, same thread, a second fact: the state-transfer twin Applications consumes (ADR-0012).
+        var changed = incoming.ToEmployerProfileChanged(thread);
+        var saved = await _dataLayer.UpsertAsync(incoming, updated, changed, cancellationToken);
         return saved.ToServiceModel();
     }
 }

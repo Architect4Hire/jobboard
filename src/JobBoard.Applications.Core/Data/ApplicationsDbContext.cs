@@ -8,6 +8,9 @@ namespace JobBoard.Applications.Core.Data;
 /// EF Core context for <c>applicationsdb</c>. Derives from <see cref="BaseDbContext"/>, which owns the
 /// cross-cutting <c>OutboxMessages</c> / <c>InboxMessages</c> sets — so the outbox row (send side) and the
 /// inbox row (receive side) land on this same scoped context and enlist in the domain transaction.
+/// <see cref="JobReferences"/> and <see cref="EmployerReferences"/> are local, event-fed projections
+/// (ADR-0012 option B) — not this service's own aggregate — kept current by <c>JobPostedConsumer</c> and
+/// <c>EmployerProfileChangedConsumer</c> so <c>ListMineAsync</c> never calls another service.
 /// </summary>
 public class ApplicationsDbContext : BaseDbContext
 {
@@ -16,6 +19,10 @@ public class ApplicationsDbContext : BaseDbContext
     }
 
     public DbSet<Application> Applications => Set<Application>();
+
+    public DbSet<JobReference> JobReferences => Set<JobReference>();
+
+    public DbSet<EmployerReference> EmployerReferences => Set<EmployerReference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

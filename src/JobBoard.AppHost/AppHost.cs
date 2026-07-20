@@ -58,9 +58,12 @@ applicationStatusChangedTopic.AddServiceBusSubscription("notifications-status-ch
 applicationStatusChangedTopic.AddServiceBusSubscription("audit-statuschanged");
 
 // Jobs publishes JobPosted from its post-job endpoint (through its outbox); Notifications consumes it.
+// Applications also subscribes: it mirrors Title/EmployerId into its local JobReference projection so
+// "my applications" can show a job title without calling back into Jobs (ADR-0012 option B).
 var jobPostedTopic = serviceBus.AddServiceBusTopic("JobPosted");
 jobPostedTopic.AddServiceBusSubscription("notifications-jobposted");
 jobPostedTopic.AddServiceBusSubscription("audit-jobposted");
+jobPostedTopic.AddServiceBusSubscription("applications-jobposted");
 
 // Cradle-to-grave audit events (SCRUB A7): actions that mutate state but published nothing before now.
 // Identity publishes AccountCreated (registration) and LoggedIn/LoginFailed (authentication); Profiles
@@ -77,6 +80,12 @@ loginFailedTopic.AddServiceBusSubscription("audit-loginfailed");
 
 var profileUpdatedTopic = serviceBus.AddServiceBusTopic("ProfileUpdated");
 profileUpdatedTopic.AddServiceBusSubscription("audit-profileupdated");
+
+// State-transfer twin of ProfileUpdated (ADR-0012 option B): carries the company name itself, so it is
+// Applications-only — ProfileUpdated stays the sole PII-free fact Audit sees. Feeds the same
+// EmployerReference projection JobPosted feeds JobReference.
+var employerProfileChangedTopic = serviceBus.AddServiceBusTopic("EmployerProfileChanged");
+employerProfileChangedTopic.AddServiceBusSubscription("applications-employerprofilechanged");
 
 // First bounded service: owns jobsdb, talks to the bus (outbox dispatcher + processor host), and caches
 // its job list in Redis (the only service wired to the cache for now).

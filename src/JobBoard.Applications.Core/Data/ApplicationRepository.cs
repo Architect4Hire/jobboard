@@ -122,6 +122,91 @@ public sealed class ApplicationRepository : BaseRepository<ApplicationsDbContext
         return matched.ToHashSet();
     }
 
+    public async Task UpsertJobReferenceAsync(
+        Guid jobId,
+        string title,
+        Guid employerId,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await Context.JobReferences.FindAsync([jobId], cancellationToken);
+        if (existing is null)
+        {
+            await Context.JobReferences.AddAsync(
+                new JobReference { JobId = jobId, Title = title, EmployerId = employerId }, cancellationToken);
+        }
+        else
+        {
+            existing.Title = title;
+            existing.EmployerId = employerId;
+        }
+    }
+
+    public async Task UpsertEmployerReferenceAsync(
+        Guid employerId,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await Context.EmployerReferences.FindAsync([employerId], cancellationToken);
+        if (existing is null)
+        {
+            await Context.EmployerReferences.AddAsync(
+                new EmployerReference { EmployerId = employerId, CompanyName = companyName }, cancellationToken);
+        }
+        else
+        {
+            existing.CompanyName = companyName;
+        }
+    }
+
+    public async Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(
+        Guid candidateId,
+        CancellationToken cancellationToken = default)
+    {
+        var applications = await Context.Applications
+            .AsNoTracking()
+            .Where(a => a.CandidateId == candidateId)
+            .OrderByDescending(a => a.SubmittedOnUtc)
+            .ToListAsync(cancellationToken);
+
+        if (applications.Count == 0)
+        {
+            return [];
+        }
+
+        // Local joins, in-memory: two small follow-up reads against this same database, keyed by the
+        // distinct ids the first read produced. No cross-service call at any point.
+        var jobIds = applications.Select(a => a.JobId).Distinct().ToList();
+        var jobs = await Context.JobReferences
+            .AsNoTracking()
+            .Where(j => jobIds.Contains(j.JobId))
+            .ToDictionaryAsync(j => j.JobId, cancellationToken);
+
+        var employerIds = jobs.Values.Select(j => j.EmployerId).Distinct().ToList();
+        var employers = await Context.EmployerReferences
+            .AsNoTracking()
+            .Where(e => employerIds.Contains(e.EmployerId))
+            .ToDictionaryAsync(e => e.EmployerId, cancellationToken);
+
+        return applications
+            .Select(a =>
+            {
+                jobs.TryGetValue(a.JobId, out var job);
+                var employerId = job?.EmployerId ?? Guid.Empty;
+                employers.TryGetValue(employerId, out var employer);
+
+                return new ApplicationHistoryServiceModel(
+                    a.Id,
+                    a.JobId,
+                    job?.Title ?? "Unknown job",
+                    employerId,
+                    employer?.CompanyName ?? "Unknown employer",
+                    a.Status,
+                    a.SubmittedOnUtc,
+                    a.StatusChangedOnUtc);
+            })
+            .ToList();
+    }
+
     /// <summary>
     /// True when <paramref name="exception"/> is the unique-index violation on <c>(CandidateId, JobId)</c> —
     /// the narrow race where two concurrent submits insert the <i>same</i> candidate/job pair in the window

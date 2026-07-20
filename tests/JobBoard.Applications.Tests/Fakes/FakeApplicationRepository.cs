@@ -35,6 +35,12 @@ public sealed class FakeApplicationRepository : IApplicationRepository
     /// <summary>When set, <see cref="AddAsync"/> throws it — used to drive the duplicate-application mapping.</summary>
     public Exception? AddError { get; init; }
 
+    public List<(Guid JobId, string Title, Guid EmployerId)> UpsertedJobReferences { get; } = [];
+
+    public List<(Guid EmployerId, string CompanyName)> UpsertedEmployerReferences { get; } = [];
+
+    public IReadOnlyList<ApplicationHistoryServiceModel> MineResult { get; init; } = [];
+
     public Task<IReadOnlyList<ApplicationSummaryServiceModel>> ListByCandidateAsync(Guid candidateId, CancellationToken cancellationToken = default)
     {
         Calls.Add($"list:{candidateId}");
@@ -89,6 +95,26 @@ public sealed class FakeApplicationRepository : IApplicationRepository
             ? ids.ToHashSet()
             : ids.Where(ClosedIds.Contains).ToHashSet();
         return Task.FromResult(result);
+    }
+
+    public Task UpsertJobReferenceAsync(Guid jobId, string title, Guid employerId, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("upsertJobReference");
+        UpsertedJobReferences.Add((jobId, title, employerId));
+        return Task.CompletedTask;
+    }
+
+    public Task UpsertEmployerReferenceAsync(Guid employerId, string companyName, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("upsertEmployerReference");
+        UpsertedEmployerReferences.Add((employerId, companyName));
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(Guid candidateId, CancellationToken cancellationToken = default)
+    {
+        Calls.Add($"listMine:{candidateId}");
+        return Task.FromResult(MineResult);
     }
 
     public async Task<T> ExecuteInTransactionAsync<T>(

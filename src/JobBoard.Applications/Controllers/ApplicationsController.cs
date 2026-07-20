@@ -29,6 +29,17 @@ public sealed class ApplicationsController : ControllerBase
         return application is null ? NotFound() : Ok(application);
     }
 
+    /// <summary>
+    /// The authenticated caller's own applications, enriched with job title and employer name — a
+    /// materialized read-model projection fed by events (ADR-0012), not a fan-out to other services.
+    /// </summary>
+    [HttpGet("mine")]
+    public async Task<ActionResult<IReadOnlyList<ApplicationHistoryServiceModel>>> Mine(CancellationToken cancellationToken)
+    {
+        var applications = await _facade.ListMineAsync(cancellationToken);
+        return Ok(applications);
+    }
+
     [HttpPost]
     public async Task<ActionResult<ApplicationDetailServiceModel>> Submit(
         [FromBody] SubmitApplicationViewModel viewModel,

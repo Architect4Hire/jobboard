@@ -58,4 +58,26 @@ public interface IApplicationRepository : IRepository
     /// keeping the emitted event a true fact.
     /// </summary>
     Task<IReadOnlySet<Guid>> GetIdsInStatusAsync(IReadOnlyCollection<Guid> ids, ApplicationStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Upserts the local <see cref="Managers.Models.Domain.JobReference"/> projection row for
+    /// <paramref name="jobId"/> — the <c>JobPostedConsumer</c>'s side effect. Caller runs it inside a
+    /// transaction with the inbox write.
+    /// </summary>
+    Task UpsertJobReferenceAsync(Guid jobId, string title, Guid employerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Upserts the local <see cref="Managers.Models.Domain.EmployerReference"/> projection row for
+    /// <paramref name="employerId"/> — the <c>EmployerProfileChangedConsumer</c>'s side effect. Caller runs
+    /// it inside a transaction with the inbox write.
+    /// </summary>
+    Task UpsertEmployerReferenceAsync(Guid employerId, string companyName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A candidate's applications, newest first, enriched with the job title and employer name from the
+    /// local <see cref="Managers.Models.Domain.JobReference"/>/<see cref="Managers.Models.Domain.EmployerReference"/>
+    /// projections. A row whose reference data hasn't arrived yet (e.g. the employer never wrote a company
+    /// profile) falls back to a placeholder rather than being dropped.
+    /// </summary>
+    Task<IReadOnlyList<ApplicationHistoryServiceModel>> ListMineAsync(Guid candidateId, CancellationToken cancellationToken = default);
 }

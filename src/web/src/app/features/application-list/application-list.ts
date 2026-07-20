@@ -4,14 +4,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
 import { ApplicationService } from '../../core/api/application.service';
-import { Session } from '../../core/auth/session';
-import { ApplicationStatus, ApplicationSummary } from '../../core/models/application.model';
+import { ApplicationHistoryItem, ApplicationStatus } from '../../core/models/application.model';
 import { ApplicationStatusBadge } from '../application-status/application-status';
 
 /**
- * A candidate's own applications with their live status. Lists through ApplicationService
- * (gateway `/applications?candidateId=`), the candidate id taken from the Session (the JWT). Withdrawing
- * updates just the affected row in place. This route is guarded, so a signed-in candidate is assumed.
+ * A candidate's own applications with their live status, job title, and employer name. Lists through
+ * ApplicationService (gateway `/applications/mine`) — a materialized read-model projection Applications
+ * keeps current off the bus (ADR-0012), not a fan-out to other services; the candidate is derived
+ * server-side from the JWT, never passed from here. Withdrawing updates just the affected row in place.
+ * This route is guarded, so a signed-in candidate is assumed.
  */
 @Component({
   selector: 'app-application-list',
@@ -22,11 +23,10 @@ import { ApplicationStatusBadge } from '../application-status/application-status
 })
 export class ApplicationList {
   private readonly applicationService = inject(ApplicationService);
-  private readonly session = inject(Session);
   private readonly destroyRef = inject(DestroyRef);
 
   /** undefined while loading, then the candidate's applications. */
-  protected readonly applications = signal<readonly ApplicationSummary[] | undefined>(undefined);
+  protected readonly applications = signal<readonly ApplicationHistoryItem[] | undefined>(undefined);
 
   protected readonly loadError = signal(false);
 
@@ -36,21 +36,16 @@ export class ApplicationList {
   protected readonly ApplicationStatus = ApplicationStatus;
 
   constructor() {
-    const candidateId = this.session.userId();
-    if (candidateId) {
-      this.applicationService
-        .listByCandidate(candidateId)
-        .pipe(takeUntilDestroyed())
-        .subscribe({
-          next: (applications) => this.applications.set(applications),
-          error: () => {
-            this.loadError.set(true);
-            this.applications.set([]);
-          },
-        });
-    } else {
-      this.applications.set([]);
-    }
+    this.applicationService
+      .listMine()
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (applications) => this.applications.set(applications),
+        error: () => {
+          this.loadError.set(true);
+          this.applications.set([]);
+        },
+      });
   }
 
   /** True while the application can still be withdrawn (not in a terminal state). */

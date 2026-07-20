@@ -30,6 +30,22 @@ export interface ApplicationSummary {
   statusChangedOnUtc: string;
 }
 
+/**
+ * Mirrors ApplicationHistoryServiceModel — the row returned by GET /applications/mine, enriched with the
+ * job title and employer name from Applications' own event-fed JobReference/EmployerReference projections
+ * (ADR-0012). No gateway fan-out involved; this is a single service's read model.
+ */
+export interface ApplicationHistoryItem {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  employerId: string;
+  employerName: string;
+  status: ApplicationStatus;
+  submittedOnUtc: string;
+  statusChangedOnUtc: string;
+}
+
 /** Mirrors SubmitApplicationViewModel — the POST /applications request body. */
 export interface SubmitApplicationRequest {
   candidateId: string;
