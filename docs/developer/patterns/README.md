@@ -32,7 +32,7 @@ mechanism itself rather than using it.
 
 ## Which pattern do I need?
 
-- **"My event never arrived at the consumer."** → [Transactional Outbox & Inbox](./transactional-outbox-and-inbox.md) — check the outbox row committed, then that the dispatcher relayed it.
+- **"My event never arrived at the consumer."** → [Transactional Outbox & Inbox](./transactional-outbox-and-inbox.md) — check the outbox row committed, then that the dispatcher relayed it. For a single event walked layer by layer with full code, see [Tracing the Outbox: `JobPosted`](../tracing-the-outbox-job-posted.md).
 - **"Two requests both passed my check but only one should have won."** → [Concurrency Control](./concurrency-control.md).
 - **"A cached list is showing stale data after a write."** → [Read-Through Caching](./read-through-caching.md).
 - **"I need another service's data for this screen."** → [Database-per-Service & Data Ownership](./database-per-service-and-data-ownership.md).
