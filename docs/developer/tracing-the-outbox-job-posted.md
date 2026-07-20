@@ -327,6 +327,98 @@ and the inbox side are the general mechanism, covered in full in
 [Transactional Outbox & Inbox](./patterns/transactional-outbox-and-inbox.md); this doc stops here, at the
 edge of the publishing service, because that's the boundary `JobPosted`'s identity is established within.
 
+## Topic & subscription — the piece that's easy to miss
+
+Everything through step 8 stays inside Jobs. But `row.Destination` is just a string ("JobPosted") — it
+only becomes an actual Service Bus topic because three independent places agree on that string by
+**convention**, not by any shared code path. This is the seam to check first when an event seems to
+vanish.
+
+**The topic and its subscriptions are provisioned in exactly one place** — the AppHost, not the outbox or
+any service:
+
+```csharp
+// src/JobBoard.AppHost/AppHost.cs
+var jobPostedTopic = serviceBus.AddServiceBusTopic("JobPosted");
+jobPostedTopic.AddServiceBusSubscription("notifications-jobposted");
+jobPostedTopic.AddServiceBusSubscription("audit-jobposted");
+```
+
+One topic, two subscriptions — that's the fan-out. Notifications and Audit each get their own independent
+copy of every `JobPosted` message; neither competes with the other for it.
+
+```mermaid
+flowchart LR
+    O[Outbox row<br/>Destination = JobPosted] -->|CreateSender Destination| T((Topic<br/>JobPosted))
+    T --> S1[Subscription<br/>notifications-jobposted]
+    T --> S2[Subscription<br/>audit-jobposted]
+    S1 --> N[Notifications'<br/>ServiceBusProcessorHost]
+    S2 --> A[Audit's<br/>ServiceBusProcessorHost]
+```
+
+On the consuming side, each service re-derives the same topic name **independently** — it's never passed
+across the boundary, just recomputed the same way. Notifications' `Program.cs`:
+
+```csharp
+builder.Services.AddIntegrationEventConsumer<JobPosted, JobPostedConsumer>("notifications-jobposted");
+```
+
+Inside that extension ([`SharedServiceCollectionExtensions.cs`](../../src/JobBoard.Shared/DependencyInjection/SharedServiceCollectionExtensions.cs)):
+
+```csharp
+public static IServiceCollection AddIntegrationEventConsumer<TEvent, TConsumer>(
+    this IServiceCollection services, string subscription)
+    where TEvent : IIntegrationEvent
+    where TConsumer : class, IIntegrationEventConsumer<TEvent>
+{
+    services.AddScoped<IIntegrationEventConsumer<TEvent>, TConsumer>();
+
+    // Topic == event type name, matching the dispatcher's per-event-type destination convention.
+    var eventName = typeof(TEvent).Name; // "JobPosted" — recomputed here, not passed in from anywhere
+    GetOrCreateConsumerRegistry(services)
+        .Add(new ConsumerRegistration(eventName, typeof(TEvent), eventName, subscription));
+
+    return services;
+}
+```
+
+The `"notifications-jobposted"` string is the one part a human has to type correctly by hand — it must
+match an AppHost-declared subscription verbatim, or the next step fails quietly. [`ServiceBusProcessorHost`](../../src/JobBoard.Shared/Messaging/ServiceBusProcessorHost.cs)
+reads every `(Topic, Subscription)` pair out of the registry and opens a processor on each:
+
+```csharp
+foreach (var (topic, subscription) in _registry.Subscriptions)
+{
+    var processor = _client.CreateProcessor(topic, subscription, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
+    // ...
+}
+```
+
+**This is the actual routing.** Whether Notifications receives `JobPosted` at all is decided entirely by
+whether `CreateProcessor("JobPosted", "notifications-jobposted", ...)` matches something AppHost
+provisioned — nothing about message *content* is involved yet. A mismatched subscription name here logs
+an error and that one subscription just never opens; the host keeps running otherwise, which makes the
+failure easy to miss.
+
+Only **after** a message physically arrives (because topic+subscription routing already succeeded) does
+`Subject` come into play — and it answers a completely different question: not "do I get this message"
+but "what do I do with it." [`IntegrationEventProcessor`](../../src/JobBoard.Shared/Messaging/IntegrationEventProcessor.cs)
+reads it purely to pick a deserialization type and a consumer:
+
+```csharp
+var eventType = _registry.ResolveEventType(message.Subject) // "JobPosted" → typeof(JobPosted)
+    ?? throw new InvalidOperationException($"No consumer registered for event '{message.Subject}'.");
+var @event = JsonSerializer.Deserialize(message.Body.ToString(), eventType, SerializerOptions);
+// ...resolves IIntegrationEventConsumer<JobPosted> from DI and invokes it (JobPostedConsumer here)
+```
+
+It happens to be the same string (`"JobPosted"`) as the topic name in this codebase, because the
+per-event-type-topic convention makes `Subject` redundant with `Topic` today — but they're checked by two
+unrelated pieces of code, at two different times, for two different purposes. That's the whole "mapping":
+not one lookup, but four separate strings (`Destination`, AppHost's topic name, the consumer's `Topic`,
+and `Subject`) that all happen to equal `typeof(TEvent).Name`, plus one you type by hand (the subscription
+name) that has to match AppHost's exactly.
+
 ## What to notice
 
 - **The event is built once, in business, from a mapper — nothing upstream or downstream rebuilds it.**
@@ -356,6 +448,11 @@ edge of the publishing service, because that's the boundary `JobPosted`'s identi
 | 6 | Repository + transaction boundary | [`JobRepository.cs`](../../src/JobBoard.Jobs.Core/Data/JobRepository.cs) · [`BaseRepository.cs`](../../src/JobBoard.Shared/Persistence/BaseRepository.cs) |
 | 7 | Outbox (event → row) | [`IOutbox.cs`](../../src/JobBoard.Shared/Messaging/IOutbox.cs) · [`Outbox.cs`](../../src/JobBoard.Shared/Messaging/Outbox.cs) · [`OutboxMessage.cs`](../../src/JobBoard.Shared/Persistence/OutboxMessage.cs) |
 | 8 | Relay (row → Service Bus) | [`OutboxRelay.cs`](../../src/JobBoard.Shared/Messaging/OutboxRelay.cs) · [`OutboxDispatcher.cs`](../../src/JobBoard.Shared/Messaging/OutboxDispatcher.cs) |
+| 9 | Topic + subscriptions provisioned | [`AppHost.cs`](../../src/JobBoard.AppHost/AppHost.cs) |
+| 9 | Consumer registration (topic re-derived) | [`SharedServiceCollectionExtensions.cs`](../../src/JobBoard.Shared/DependencyInjection/SharedServiceCollectionExtensions.cs) · [`ConsumerRegistration.cs`](../../src/JobBoard.Shared/Messaging/ConsumerRegistration.cs) · [`ConsumerRegistry.cs`](../../src/JobBoard.Shared/Messaging/ConsumerRegistry.cs) |
+| 9 | Processor opens (topic, subscription) | [`ServiceBusProcessorHost.cs`](../../src/JobBoard.Shared/Messaging/ServiceBusProcessorHost.cs) |
+| 9 | Subject → type/consumer resolution | [`IntegrationEventProcessor.cs`](../../src/JobBoard.Shared/Messaging/IntegrationEventProcessor.cs) |
+| 9 | The consumer itself | [`JobPostedConsumer.cs`](../../src/JobBoard.Notifications/Consumers/JobPostedConsumer.cs) · [`Notifications Program.cs`](../../src/JobBoard.Notifications/Program.cs) |
 | — | The event contract | [`JobPosted.cs`](../../src/JobBoard.Contracts/JobPosted.cs) |
 | — | Audit thread stamped by business | [`AuditThread.cs`](../../src/JobBoard.Shared/Requests/AuditThread.cs) · [`AuditThreadExtensions.cs`](../../src/JobBoard.Shared/Requests/AuditThreadExtensions.cs) |
 
