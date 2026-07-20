@@ -1,4 +1,5 @@
 using JobBoard.Profiles.Core.Data;
+using JobBoard.Shared.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,8 +46,11 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<ProfilesDbContext>();
     await db.Database.MigrateAsync();
 
-    // Seed demo candidate/employer profiles for the seeded accounts (idempotent).
-    await JobBoard.Profiles.Core.Seeding.ProfilesSeedData.SeedAsync(db);
+    // Seed demo candidate/employer profiles for the seeded accounts (idempotent). IOutbox resolves
+    // against this same scope's ProfilesDbContext (AddSharedMessaging<TContext>), so a newly seeded
+    // employer's EmployerProfileChanged row lands in the same SaveChangesAsync as the profile itself.
+    var outbox = scope.ServiceProvider.GetRequiredService<IOutbox>();
+    await JobBoard.Profiles.Core.Seeding.ProfilesSeedData.SeedAsync(db, outbox);
 }
 
 app.UseExceptionHandler();

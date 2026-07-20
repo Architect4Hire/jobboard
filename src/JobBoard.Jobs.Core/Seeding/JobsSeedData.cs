@@ -1,5 +1,8 @@
 using JobBoard.Jobs.Core.Data;
+using JobBoard.Jobs.Core.Managers.Mappers;
 using JobBoard.Jobs.Core.Managers.Models.Domain;
+using JobBoard.Shared.Messaging;
+using JobBoard.Shared.Requests;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobBoard.Jobs.Core.Seeding;
@@ -25,7 +28,7 @@ public static class JobsSeedData
     /// </summary>
     public static Guid JobId(int n) => new($"10000000-0000-0000-0000-0000000000{n:x2}");
 
-    public static async Task SeedAsync(JobsDbContext db, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(JobsDbContext db, IOutbox outbox, CancellationToken cancellationToken = default)
     {
         // De-duplicated classification pools, keyed by slug so a slug maps to exactly one row. Pre-loaded
         // with what's already in the db so a newly-added job reuses existing Category/Tag rows by slug
@@ -149,7 +152,20 @@ public static class JobsSeedData
             .ToListAsync(cancellationToken);
         var existing = existingJobIds.ToHashSet();
 
-        db.Jobs.AddRange(jobs.Where(j => !existing.Contains(j.Id)));
+        var newJobs = jobs.Where(j => !existing.Contains(j.Id)).ToList();
+        db.Jobs.AddRange(newJobs);
+
+        // Publish JobPosted for each newly-seeded job, exactly like JobBusiness.PostAsync, so Applications'
+        // JobReference projection (ADR-0012) is populated for demo jobs the same way it is for real posts.
+        // No HTTP request exists at seed time, so there's no IRequestContext to derive a thread from — each
+        // event synthesizes its own root thread (causation == its own correlation, no actor).
+        foreach (var newJob in newJobs)
+        {
+            var correlationId = Guid.NewGuid();
+            var thread = new AuditThread(correlationId, correlationId, null);
+            await outbox.EnqueueAsync(newJob.ToJobPosted(thread), cancellationToken);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 using JobBoard.Jobs.Core.Data;
+using JobBoard.Shared.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,7 +46,10 @@ if (app.Environment.IsDevelopment())
     await db.Database.MigrateAsync();
 
     // Seed prototypical .NET / Angular / Azure postings (idempotent) so the board has content to review.
-    await JobBoard.Jobs.Core.Seeding.JobsSeedData.SeedAsync(db);
+    // IOutbox resolves against this same scope's JobsDbContext (AddSharedMessaging<TContext>), so a newly
+    // seeded job's JobPosted row lands in the same SaveChangesAsync as the job itself.
+    var outbox = scope.ServiceProvider.GetRequiredService<IOutbox>();
+    await JobBoard.Jobs.Core.Seeding.JobsSeedData.SeedAsync(db, outbox);
 }
 
 app.UseExceptionHandler();

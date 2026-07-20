@@ -1,5 +1,8 @@
 using JobBoard.Profiles.Core.Data;
+using JobBoard.Profiles.Core.Managers.Mappers;
 using JobBoard.Profiles.Core.Managers.Models.Domain;
+using JobBoard.Shared.Messaging;
+using JobBoard.Shared.Requests;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobBoard.Profiles.Core.Seeding;
@@ -17,7 +20,7 @@ public static class ProfilesSeedData
     public static readonly Guid EmployerId = new("e0000000-0000-0000-0000-000000000001");
     public static readonly Guid CandidateId = new("c0000000-0000-0000-0000-000000000001");
 
-    public static async Task SeedAsync(ProfilesDbContext db, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(ProfilesDbContext db, IOutbox outbox, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
 
@@ -52,7 +55,7 @@ public static class ProfilesSeedData
 
         if (!await db.EmployerProfiles.AnyAsync(p => p.Id == EmployerId, cancellationToken))
         {
-            db.EmployerProfiles.Add(new EmployerProfile
+            var employerProfile = new EmployerProfile
             {
                 Id = EmployerId,
                 CompanyName = "TechNova Cloud",
@@ -62,7 +65,16 @@ public static class ProfilesSeedData
                     + "architecture on .NET Aspire and Angular, and we're hiring engineers who love clean "
                     + "distributed systems and sharp front-end craft.",
                 UpdatedOnUtc = now,
-            });
+            };
+            db.EmployerProfiles.Add(employerProfile);
+
+            // Publish EmployerProfileChanged so Applications' EmployerReference projection (ADR-0012) is
+            // populated for the demo employer the same way it is for a real profile write. No HTTP request
+            // exists at seed time, so this synthesizes its own root thread (causation == its own
+            // correlation, no actor) rather than deriving one from IRequestContext.
+            var correlationId = Guid.NewGuid();
+            var thread = new AuditThread(correlationId, correlationId, null);
+            await outbox.EnqueueAsync(employerProfile.ToEmployerProfileChanged(thread), cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
