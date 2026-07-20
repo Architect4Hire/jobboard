@@ -1,0 +1,138 @@
+<section class="hero">
+  <div class="hero__glow" aria-hidden="true"></div>
+  <div class="hero__inner">
+    <span class="eyebrow">.NET · Angular · Azure careers</span>
+    <h1 class="hero__title">
+      Find your next role in the <span class="gradient-text">modern stack</span>.
+    </h1>
+    <p class="hero__sub">
+      Curated engineering roles for builders of distributed systems, cloud platforms, and sharp
+      front-ends.
+      @if (openCount()) {
+        <strong>{{ openCount() }}</strong> open positions right now.
+      }
+    </p>
+
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M21 21l-4.3-4.3M11 19a8 8 0 100-16 8 8 0 000 16z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+      <input
+        type="text"
+        class="search__input"
+        placeholder="Search title, skill or location — e.g. Angular, Azure, Remote"
+        [value]="query()"
+        (input)="onSearch($any($event.target).value)"
+        aria-label="Search positions"
+      />
+    </div>
+  </div>
+</section>
+
+@if (loadError()) {
+  <p class="load-error page" role="alert">Couldn't load positions. Please refresh to try again.</p>
+} @else if (visibleJobs(); as jobs) {
+  <section class="board page">
+    <header class="board__head">
+      <h2 class="board__title">Open positions</h2>
+      @if (categories().length) {
+        <div class="filters" role="group" aria-label="Filter by category">
+          <button
+            type="button"
+            class="filters__chip"
+            [class.filters__chip--active]="selectedCategory() === null"
+            (click)="select(null)"
+          >
+            All roles
+          </button>
+          @for (category of categories(); track category) {
+            <button
+              type="button"
+              class="filters__chip"
+              [class.filters__chip--active]="selectedCategory() === category"
+              (click)="select(category)"
+            >
+              {{ category }}
+            </button>
+          }
+        </div>
+      }
+    </header>
+
+    @if (jobs.length) {
+      <ul class="cards">
+        @for (job of jobs; track job.id) {
+          <li class="card surface" [class.card--closed]="job.status === JobStatus.Closed">
+            <a class="card__link" [routerLink]="['/jobs', job.id]">
+              <div class="card__top">
+                <span class="card__badge" aria-hidden="true">{{ monogram(job.title) }}</span>
+                <div class="card__pills">
+                  @if (isRemote(job.location)) {
+                    <span class="pill pill--remote">Remote</span>
+                  }
+                  @if (job.status === JobStatus.Closed) {
+                    <span class="pill pill--closed">Closed</span>
+                  } @else {
+                    <span class="pill pill--open">Open</span>
+                  }
+                </div>
+              </div>
+
+              <h3 class="card__title">{{ job.title }}</h3>
+              <p class="card__location">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="card__pin">
+                  <path
+                    d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle cx="12" cy="10" r="2.4" fill="currentColor" />
+                </svg>
+                {{ job.location }}
+              </p>
+
+              <p class="card__salary">
+                <span class="gradient-text"
+                  >${{ job.salary.min | number }}–${{ job.salary.max | number }}</span
+                >
+                <span class="card__salary-unit">{{ job.salary.currency }} / yr</span>
+              </p>
+
+              @if (job.categorySlugs.length) {
+                <ul class="card__tags">
+                  @for (slug of job.categorySlugs; track slug) {
+                    <li class="tag">{{ slug }}</li>
+                  }
+                </ul>
+              }
+
+              <footer class="card__foot">
+                <span class="card__posted">{{ postedLabel(job.createdOnUtc) }}</span>
+                <span class="card__cta">View role →</span>
+              </footer>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">
+        No positions match your search. Try a different skill or clear the filter.
+      </p>
+    }
+  </section>
+} @else {
+  <div class="board page">
+    <ul class="cards" aria-hidden="true">
+      @for (n of [1, 2, 3, 4, 5, 6]; track n) {
+        <li class="card card--skeleton surface"></li>
+      }
+    </ul>
+  </div>
+}

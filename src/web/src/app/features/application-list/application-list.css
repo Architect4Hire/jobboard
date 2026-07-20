@@ -1,0 +1,115 @@
+.applications {
+  max-width: 780px;
+}
+.applications__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.6rem;
+}
+.applications__head h1 {
+  margin: 0.35rem 0 0;
+  font-size: 1.9rem;
+}
+.applications__count {
+  margin: 0;
+  color: var(--text-mid);
+  font-size: 0.92rem;
+}
+.applications__count strong {
+  color: var(--cyan-400);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.row:hover {
+  transform: translateX(3px);
+  border-color: var(--line-strong);
+}
+.row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.row__job {
+  color: var(--text-hi);
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+.row__job:hover {
+  color: var(--cyan-400);
+}
+.row__date {
+  color: var(--text-lo);
+  font-size: 0.8rem;
+}
+.row__side {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.row__withdraw {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-pill);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--red-400);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.row__withdraw:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.16);
+}
+.row__withdraw:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.empty-state__icon {
+  font-size: 2.4rem;
+}
+.empty-state h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.empty-state p {
+  margin: 0 0 0.8rem;
+  color: var(--text-mid);
+  font-size: 0.92rem;
+  max-width: 42ch;
+}
+
+@media (max-width: 560px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

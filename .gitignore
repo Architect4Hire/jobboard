@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+.vs/
+
+# Aspire / local
+**/appsettings.*.local.json
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+
+# EF
+*.db
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+
+# Claude Code — personal, not shared
+.claude/settings.local.json
+.claude/**/*.local.*

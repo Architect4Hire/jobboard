@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobBoard.Shared\JobBoard.Shared.csproj" />
+    <ProjectReference Include="..\JobBoard.Contracts\JobBoard.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- StatusCodes for the HTTP status carried on DomainException (same reason Shared takes it). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- EF Core Npgsql provider: the DbContext + its migrations live here, so the provider does too. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Azure Blob Storage SDK: IResumeStorage's implementation types against BlobServiceClient (the
+         client is registered in the host via the Aspire integration; the SDK types live here). -->
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <!-- Edge validation of view models (the facade validates; validators live in Managers/Validators). -->
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+
+</Project>

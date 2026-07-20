@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobBoard.Shared\JobBoard.Shared.csproj" />
+    <ProjectReference Include="..\JobBoard.Contracts\JobBoard.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- EF Core Npgsql provider: the DbContext + its migrations live here, so the provider does too. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- FluentValidation: the support-query filter is validated at the facade edge (SCRUB A6). -->
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+
+</Project>

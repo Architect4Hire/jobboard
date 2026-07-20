@@ -1,0 +1,93 @@
+.auth-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 3.5rem 1.25rem 4rem;
+}
+.auth {
+  width: 100%;
+  max-width: 440px;
+  padding: 2rem 2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.auth__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.auth__head h1 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+.auth__lede {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-mid);
+}
+.auth__error {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--red-400);
+  font-size: 0.85rem;
+}
+.auth__alt {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-lo);
+}
+
+/* Role picker */
+.role {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.role > legend {
+  margin-bottom: 0.4rem;
+}
+.role__option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(3, 10, 22, 0.4);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.role__option:hover {
+  border-color: var(--line-strong);
+}
+.role__option--active {
+  border-color: var(--blue-400);
+  background: rgba(47, 155, 230, 0.1);
+  box-shadow: 0 0 0 3px rgba(47, 155, 230, 0.16);
+}
+.role__option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.role__name {
+  font-family: var(--font-head);
+  font-weight: 600;
+  color: var(--text-hi);
+  font-size: 0.95rem;
+}
+.role__desc {
+  font-size: 0.76rem;
+  color: var(--text-lo);
+}

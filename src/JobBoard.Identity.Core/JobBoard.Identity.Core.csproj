@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JobBoard.Shared\JobBoard.Shared.csproj" />
+    <ProjectReference Include="..\JobBoard.Contracts\JobBoard.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- StatusCodes for the HTTP status carried on DomainException (same reason Shared takes it). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- EF Core Npgsql provider: the DbContext + its migrations live here, so the provider does too. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Edge validation of view models (the facade validates; validators live in Managers/Validators). -->
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- JWT issuance: JsonWebTokenHandler + SymmetricSecurityKey/SigningCredentials. (Password hashing
+         via PasswordHasher<Account> comes from the Microsoft.AspNetCore.App shared framework above.) -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+  </ItemGroup>
+
+</Project>

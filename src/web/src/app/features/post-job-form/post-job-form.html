@@ -1,0 +1,70 @@
+<div class="post-wrap page">
+  <header class="post-head">
+    <span class="eyebrow">Employer</span>
+    <h1>Post a job</h1>
+    <p class="post-head__lede">Reach engineers who build on .NET, Angular and Azure.</p>
+  </header>
+
+  <form class="post-job surface" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="field">
+      <span class="field__label">Title</span>
+      <input type="text" formControlName="title" placeholder="Senior .NET Backend Engineer" />
+      @if (form.controls.title.touched && form.controls.title.invalid) {
+        <span class="field__error">A title is required.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="field__label">Description</span>
+      <textarea
+        rows="6"
+        formControlName="description"
+        placeholder="What the role owns, the stack, and what a great candidate looks like…"
+      ></textarea>
+      @if (form.controls.description.touched && form.controls.description.invalid) {
+        <span class="field__error">A description is required.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="field__label">Location</span>
+      <input type="text" formControlName="location" placeholder="Remote (US) · or a city" />
+      @if (form.controls.location.touched && form.controls.location.invalid) {
+        <span class="field__error">A location is required.</span>
+      }
+    </label>
+
+    <div class="salary">
+      <label class="field">
+        <span class="field__label">Salary min</span>
+        <input type="number" formControlName="salaryMin" min="0" />
+      </label>
+      <label class="field">
+        <span class="field__label">Salary max</span>
+        <input type="number" formControlName="salaryMax" min="0" />
+      </label>
+      <label class="field field--currency">
+        <span class="field__label">Currency</span>
+        <input type="text" formControlName="currency" maxlength="3" />
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="field__label">Categories <em>(comma-separated)</em></span>
+      <input type="text" formControlName="categories" placeholder="Backend, Cloud" />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Skills / tags <em>(comma-separated)</em></span>
+      <input type="text" formControlName="tags" placeholder="c-sharp, aspnet-core, azure" />
+    </label>
+
+    @if (error(); as message) {
+      <p class="post-job__error" role="alert">{{ message }}</p>
+    }
+
+    <button type="submit" class="btn btn--cta post-job__submit" [disabled]="submitting()">
+      {{ submitting() ? 'Posting…' : 'Publish job' }}
+    </button>
+  </form>
+</div>

@@ -1,0 +1,103 @@
+<Project>
+
+  <!--
+    Central Package Management. Every <PackageReference> across the solution omits its Version and
+    resolves it from a <PackageVersion> here, so a package is pinned in exactly one place.
+
+    Versions are pinned to what was installed and verified against https://aspire.dev / nuget.org.
+    The scaffolding prompts (docs/prompts/scrub-prompts.md) add each package here as they introduce it.
+
+    The families you'll add, by area (names may shift between versions — verify):
+      Aspire:        Aspire.Hosting.AppHost (via the AppHost SDK), Aspire.Hosting.PostgreSQL,
+                     Aspire.Hosting.JavaScript (JS/Angular app — NOT Aspire.Hosting.NodeJs),
+                     Aspire.Hosting.Azure.ServiceBus, Aspire.Hosting.Redis, plus client integrations
+                     (Aspire.Npgsql.EntityFrameworkCore.PostgreSQL, Aspire.Azure.Messaging.ServiceBus,
+                     Aspire.StackExchange.Redis)
+      EF Core:       Microsoft.EntityFrameworkCore.Design, Npgsql.EntityFrameworkCore.PostgreSQL
+      Web / gateway: Yarp.ReverseProxy, Microsoft.AspNetCore.Authentication.JwtBearer
+      Validation:    FluentValidation, FluentValidation.DependencyInjectionExtensions
+      Testing:       xunit, Microsoft.NET.Test.Sdk, NSubstitute (or Moq),
+                     Microsoft.AspNetCore.Mvc.Testing, Testcontainers.PostgreSql
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Aspire hosting integrations (AppHost) -->
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
+    <!-- Profiles: Azure Storage run as the Azurite emulator (a local container), backing résumé uploads -->
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Service hosts: Aspire client integrations (Npgsql EF Core + Service Bus client + Redis cache) -->
+    <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Azure.Messaging.ServiceBus" Version="13.4.6" />
+    <!-- Jobs host: Redis-backed IDistributedCache client integration (facade job-list cache) -->
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.4.6" />
+    <!-- Profiles host: Azure Blob Storage client integration (BlobServiceClient for résumé blobs) -->
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="13.4.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Gateway (YARP reverse-proxy library) + the resolver that lets YARP route to Aspire resource
+         names ("http://jobs") through service discovery instead of a literal DNS host. -->
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery.Yarp" Version="10.7.0" />
+    <!-- Gateway edge auth: validates JWTs issued by JobBoard.Identity before proxying protected routes. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JobBoard.Identity.Core: JWT issuance (password hashing comes from the shared framework). -->
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JobBoard.Shared: EF Core spine (base context + repository) and edge validation -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <!-- FluentValidation DI helper (AddValidatorsFromAssemblyContaining) — used by each service's .Core -->
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <!-- JobBoard.Shared: Service Bus SDK types for the outbox dispatcher + processor host (the
+         AddAzureServiceBusClient integration is added per-host, not here) -->
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JobBoard.Profiles.Core: Azure Blob Storage SDK types (BlobServiceClient) for résumé storage.
+         The BlobServiceClient itself is registered in the host via the Aspire client integration; Core
+         references the SDK so IResumeStorage's implementation can type against it. -->
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tests: xUnit + a real relational provider (SQLite) for transaction/rollback coverage -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <!-- Override the vulnerable native lib (2.1.11) pulled transitively by the SQLite provider -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <!-- Endpoint integration tests: WebApplicationFactory over the host -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ServiceDefaults: resilience, service discovery, OpenTelemetry -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+  </ItemGroup>
+
+</Project>

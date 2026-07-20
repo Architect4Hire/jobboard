@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\JobBoard.Profiles\JobBoard.Profiles.csproj" />
+    <ProjectReference Include="..\..\src\JobBoard.Profiles.Core\JobBoard.Profiles.Core.csproj" />
+    <ProjectReference Include="..\..\src\JobBoard.Shared\JobBoard.Shared.csproj" />
+    <ProjectReference Include="..\..\src\JobBoard.Contracts\JobBoard.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

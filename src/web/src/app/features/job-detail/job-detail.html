@@ -1,0 +1,78 @@
+@if (job(); as job) {
+  <article class="detail page">
+    <a class="detail__back" routerLink="/jobs">← All positions</a>
+
+    <div class="detail__grid">
+      <div class="detail__main surface">
+        <header class="detail__head">
+          <span class="detail__badge" aria-hidden="true">{{ monogram(job.title) }}</span>
+          <div>
+            <h1 class="detail__title">{{ job.title }}</h1>
+            <p class="detail__meta">
+              <span class="detail__meta-item">📍 {{ job.location }}</span>
+              <span
+                class="pill"
+                [class.pill--open]="job.status === JobStatus.Open"
+                [class.pill--closed]="job.status !== JobStatus.Open"
+                >{{ job.status === JobStatus.Open ? 'Open' : 'Closed' }}</span
+              >
+            </p>
+          </div>
+        </header>
+
+        @if (job.categories.length || job.tags.length) {
+          <ul class="detail__tags">
+            @for (category of job.categories; track category.slug) {
+              <li class="tag tag--plain detail__tag--category">{{ category.name }}</li>
+            }
+            @for (tag of job.tags; track tag.slug) {
+              <li class="tag">{{ tag.name }}</li>
+            }
+          </ul>
+        }
+
+        <h2 class="detail__section-title">About this role</h2>
+        <p class="detail__description">{{ job.description }}</p>
+      </div>
+
+      <aside class="detail__aside surface">
+        <span class="detail__salary-label">Compensation</span>
+        <p class="detail__salary gradient-text">
+          ${{ job.salary.min | number }}–${{ job.salary.max | number }}
+        </p>
+        <span class="detail__salary-unit">{{ job.salary.currency }} / year</span>
+
+        <div class="apply">
+          @if (submitted(); as application) {
+            <p class="apply__done">
+              ✓ Application submitted — <app-application-status [status]="application.status" />
+            </p>
+          } @else if (job.status !== JobStatus.Open) {
+            <p class="apply__closed">This position is no longer accepting applications.</p>
+          } @else if (isCandidate()) {
+            <button
+              type="button"
+              class="btn btn--cta btn--block apply__btn"
+              [disabled]="applying()"
+              (click)="apply()"
+            >
+              {{ applying() ? 'Submitting…' : 'Apply now' }}
+            </button>
+            @if (applyError(); as error) {
+              <p class="apply__error" role="alert">{{ error }}</p>
+            }
+          } @else if (!isAuthenticated()) {
+            <a class="btn btn--primary btn--block" routerLink="/login">Log in to apply</a>
+            <p class="apply__hint">Sign in as a candidate to submit your application.</p>
+          } @else {
+            <p class="apply__hint">Applying is available to candidate accounts.</p>
+          }
+        </div>
+      </aside>
+    </div>
+  </article>
+} @else if (loadError()) {
+  <p class="load-error page" role="alert">Couldn't load this position. Please try again.</p>
+} @else {
+  <p class="loading page">Loading position…</p>
+}

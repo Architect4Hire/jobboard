@@ -1,0 +1,51 @@
+<div class="auth-wrap">
+  <form class="auth surface" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="auth__head">
+      <span class="eyebrow">Welcome back</span>
+      <h1>Log in to JobBoard</h1>
+      <p class="auth__lede">Sign in to apply to roles and track your applications.</p>
+    </header>
+
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input
+        type="email"
+        formControlName="email"
+        autocomplete="username"
+        placeholder="you@company.dev"
+      />
+      @if (form.controls.email.touched && form.controls.email.invalid) {
+        <span class="field__error">Enter a valid email.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        placeholder="••••••••"
+      />
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <span class="field__error">A password is required.</span>
+      }
+    </label>
+
+    @if (error(); as message) {
+      <p class="auth__error" role="alert">{{ message }}</p>
+    }
+
+    <button type="submit" class="btn btn--primary btn--block" [disabled]="submitting()">
+      {{ submitting() ? 'Signing in…' : 'Log in' }}
+    </button>
+
+    <p class="auth__alt">No account? <a routerLink="/register">Create one</a></p>
+
+    <aside class="demo-hint">
+      <span class="demo-hint__title">Demo accounts</span>
+      <code>candidate&#64;jobboard.dev</code> · <code>employer&#64;jobboard.dev</code>
+      <span class="demo-hint__pw">password: <code>Passw0rd!</code></span>
+    </aside>
+  </form>
+</div>
