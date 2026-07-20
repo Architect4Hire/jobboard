@@ -44,13 +44,14 @@ Everything the docs reference — the constitution ([`../CLAUDE.md`](../CLAUDE.m
 
 | Document | What's inside |
 | --- | --- |
+| [Tracing a Slice: Applying to a Job](./tracing-a-slice-apply-to-a-job.md) | A new developer's walkthrough of one complete request, start to finish — Angular → gateway → Applications' full controller → facade → business → data → repository stack → outbox → Service Bus → two independent consumers (Notifications, Audit) — with the real code at every hop. Read this first to see how the pieces fit together before building your own. |
 | [Adding an Endpoint by Hand](./adding-an-endpoint-manually.md) | A developer's step-by-step walkthrough for adding a REST endpoint (or event-driven consumer) to a service — the full controller → facade → business → data → repository slice, outbox, gateway route, and tests — done manually, without Claude Code. Grounded in the real Jobs service code. |
 | [Adding Seed Data](./adding-seed-data.md) | How to add development-only demo data so the per-service databases come up populated after `aspire run` — where seeders live, the idempotency + well-known-id conventions, host wiring, and how to re-seed. Grounded in the real service seeders. |
 | [SCRUB Prompts](./scrub-prompts.md) | The prompts that stand the system up and keep it consistent. *Part 1 — Scaffolding:* a one-time, ordered sequence to create `src/`. *Part 2 — Operational templates:* reusable prompts for feature slices, cross-service events, migrations, refactors, and debugging. |
 
 ## Where to start
 
-- **New to the project?** Read the [High-Level Design](./high-level-design.md), then skim the [ADRs](./adr/README.md).
+- **New to the project?** Read the [High-Level Design](./high-level-design.md), then walk [Tracing a Slice: Applying to a Job](./tracing-a-slice-apply-to-a-job.md) to see one real request move through every layer before skimming the [ADRs](./adr/README.md).
 - **Building it from scratch?** Start a Claude Code session at the repo root and begin with [SCRUB Prompts](./scrub-prompts.md), Part 1, Prompt 0.
 - **Adding a feature by hand?** Follow [Adding an Endpoint by Hand](./adding-an-endpoint-manually.md) — the full controller → repository slice, no Claude Code required.
 - **Reviewing where it stands?** See the [Ongoing Architecture Plan](./ongoing-architecture-plan.md).
